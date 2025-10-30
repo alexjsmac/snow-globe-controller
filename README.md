@@ -1,20 +1,34 @@
-# TouchDesigner Slider Queue
+# TouchDesigner Queue Controller
 
-A real-time, queue-based interactive slider control system that allows users to take turns controlling a slider for 30 seconds, with values transmitted to TouchDesigner for live visualizations.
+A real-time, queue-based interactive control system for TouchDesigner installations. Originally designed for slider control, now featuring a Christmas-themed installation with customizable theme selection.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.5.1-black.svg)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange.svg)
 
-## 🎮 Overview
+## 🎄 Christmas Theme Installation
 
-TouchDesigner Slider Queue provides a web-based interface where users can:
+![Christmas Magic Installation](https://github.com/user-attachments/assets/3d21e848-a614-4d9c-9514-d926c498557e)
+
+The latest version features a Christmas-themed interactive installation where users can:
+- **Select a theme** from 3 customizable rows (Color, Pattern, Effect)
+- **Join a queue** and wait for their turn
+- **See their theme displayed** for 1 minute when it's their turn
+- **Experience real-time updates** as the queue progresses
+
+### Theme Options
+- **Colors**: 🔴 Red, 🟢 Green, 🟡 Gold
+- **Patterns**: ❄️ Snowflakes, ⭐ Stars, 💡 Lights
+- **Effects**: ✨ Sparkle, 💫 Pulse, 🌊 Wave
+
+## 🎮 Original Slider Mode
+
+The original slider control system is still available where users can:
 - Join a queue to control a slider interface
-- Take 30-second turns controlling the slider
+- Take turns controlling the slider (configurable duration)
 - Send real-time values (-1 to 1) to TouchDesigner
 - View their queue position and wait time
-- See live updates as the queue progresses
 
 Perfect for interactive installations, collaborative performances, or live VJ sessions where audience participation enhances the visual experience.
 
@@ -135,7 +149,19 @@ service cloud.firestore {
 
 ### Firebase Data Sources
 
-1. **Firebase Realtime Database** - Live data (recommended)
+**Christmas Theme Mode** - Current theme selection:
+   ```json
+   // /themeValues/current
+   {
+     "row1": "green",         // Selected color option
+     "row2": "snowflakes",    // Selected pattern option
+     "row3": "wave",          // Selected effect option
+     "sessionId": "uuid",     // Unique session identifier
+     "timestamp": 1234567890  // Unix timestamp
+   }
+   ```
+
+**Slider Mode** - Current slider value:
    ```json
    // /sliderValues/current
    {
@@ -166,7 +192,16 @@ service cloud.firestore {
 
 ### TouchDesigner Setup
 
-1. **Firebase Realtime Database (Recommended)**:
+1. **Christmas Theme Mode**:
+   ```python
+   # In TouchDesigner, use Web Client DAT
+   # URL: https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/themeValues/current.json
+   # Method: GET
+   # Poll every 1-5 seconds (themes change every 60 seconds)
+   # Parse JSON to get row1, row2, row3 values
+   ```
+
+2. **Slider Mode**:
    ```python
    # In TouchDesigner, use Web Client DAT
    # URL: https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/sliderValues/current.json
@@ -238,10 +273,10 @@ touchdesigner-slider-queue/
 
 ### Modifying Queue Duration
 
-To change the 30-second turn duration, update these locations in `lib/firebase-queue.ts`:
-- Line 135: `endTime` calculation (30 * 1000 = 30 seconds)
-- Line 154: `setTimeout` duration (30000 = 30 seconds)
-- Update duration field in Firestore session summary
+To change the turn duration (currently 60 seconds for Christmas theme), update in `lib/queue-manager.ts`:
+- Line ~163: `endTime` calculation (60 * 1000 = 60 seconds)
+- Line ~183: `setTimeout` duration (60000 = 60 seconds)
+- Update progress bar calculations in component files (divide by 60)
 
 ### Adjusting Sampling Rate
 
