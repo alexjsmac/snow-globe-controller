@@ -2,8 +2,14 @@
 
 import { useState } from 'react';
 import { useSocket } from '@/hooks/useFirebaseQueue';
-import { Slider } from '@/components/Slider';
+import { ThemeSelector } from '@/components/ThemeSelector';
 import { Footer } from '@/components/Footer';
+import { 
+  colorOptions, 
+  patternOptions, 
+  effectOptions, 
+  defaultThemeSelection 
+} from '@/lib/theme-options';
 
 export default function Home() {
   const {
@@ -12,28 +18,21 @@ export default function Home() {
     queuePosition,
     queueLength,
     remainingTime,
-    joinQueue,
-    rejoinQueue,
-    sendSliderValue
+    submitTheme
   } = useSocket();
 
-  const [sliderValue, setSliderValue] = useState(0);
-  const [hasJoinedBefore, setHasJoinedBefore] = useState(false);
+  const [selectedRow1, setSelectedRow1] = useState(defaultThemeSelection.row1);
+  const [selectedRow2, setSelectedRow2] = useState(defaultThemeSelection.row2);
+  const [selectedRow3, setSelectedRow3] = useState(defaultThemeSelection.row3);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  const handleSliderChange = (value: number) => {
-    setSliderValue(value);
-    if (isActive) {
-      sendSliderValue(value);
+  const handleSubmit = async () => {
+    try {
+      await submitTheme(selectedRow1, selectedRow2, selectedRow3);
+      setHasSubmitted(true);
+    } catch (error) {
+      console.error('Failed to submit theme:', error);
     }
-  };
-
-  const handleJoinQueue = () => {
-    joinQueue();
-    setHasJoinedBefore(true);
-  };
-
-  const handleRejoinQueue = () => {
-    rejoinQueue();
   };
 
   // Format time display
@@ -44,145 +43,175 @@ export default function Home() {
   };
 
   // Determine UI state
-  const showJoinButton = !isActive && queuePosition === -1 && !hasJoinedBefore;
-  const showRejoinButton = !isActive && queuePosition === -1 && hasJoinedBefore;
+  const showSubmitButton = !hasSubmitted && queuePosition === -1;
   const isInQueue = queuePosition > 0;
-  const isControlling = isActive && queuePosition === 0;
+  const isYourTurn = isActive && queuePosition === 0;
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Animated background effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-red-900/20">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+    <div className="min-h-screen bg-gradient-to-b from-red-950 via-green-950 to-red-950 relative overflow-hidden">
+      {/* Christmas snowflakes background effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 via-green-900/20 to-red-900/30">
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFFFFF' fill-opacity='0.2'%3E%3Cpath d='M30 30 L32 28 L30 26 L28 28 Z M30 30 L28 32 L30 34 L32 32 Z M30 30 L26 30 L24 32 L26 34 L30 30 Z M30 30 L34 30 L36 28 L34 26 L30 30 Z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
       </div>
       
       <div className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
         {/* Header */}
         <header className="text-center mb-12">
-          <h1 className="text-5xl font-black mb-4 relative inline-block">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-purple-500 to-cyan-500 animate-pulse">
-              Concrete Canopy
+          <h1 className="text-6xl font-black mb-4 relative inline-block">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-green-300 to-red-400 drop-shadow-lg">
+              🎄 Christmas Magic 🎄
             </span>
-            <br />
-            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-purple-600 rounded-lg blur opacity-30 animate-pulse"></div>
           </h1>
-          <p className="text-gray-400 text-lg tracking-wide mt-4">
-            Take turns controlling the slider to influence the visuals and audio
+          <p className="text-green-100 text-xl tracking-wide mt-4 font-semibold">
+            Create your theme and join the festive installation!
           </p>
         </header>
 
         {/* Connection Status */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
-            <div className={`w-3 h-3 ${
-              isConnected ? 'bg-cyan-400 shadow-cyan-400/50' : 'bg-red-600 shadow-red-600/50'
-            } shadow-lg animate-pulse`} style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }} />
-            <span className={`text-sm font-mono tracking-wider ${
-              isConnected ? 'text-cyan-400' : 'text-red-400'
+            <div className={`w-4 h-4 rounded-full ${
+              isConnected ? 'bg-green-400 shadow-green-400/50' : 'bg-red-600 shadow-red-600/50'
+            } shadow-lg animate-pulse`} />
+            <span className={`text-sm font-semibold tracking-wider ${
+              isConnected ? 'text-green-300' : 'text-red-400'
             }`}>
-              [{isConnected ? 'SYSTEM::ONLINE' : 'SYSTEM::OFFLINE'}]
+              {isConnected ? '✨ Connected to Christmas Magic ✨' : '❌ Connection Lost'}
             </span>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="bg-gray-900/90 backdrop-blur-sm border border-purple-500/30 rounded-none p-8 mb-8 relative overflow-hidden">
-          {/* Glitch effect corners */}
-          <div className="absolute top-0 left-0 w-20 h-20 border-l-2 border-t-2 border-cyan-500/50"></div>
-          <div className="absolute top-0 right-0 w-20 h-20 border-r-2 border-t-2 border-cyan-500/50"></div>
-          <div className="absolute bottom-0 left-0 w-20 h-20 border-l-2 border-b-2 border-cyan-500/50"></div>
-          <div className="absolute bottom-0 right-0 w-20 h-20 border-r-2 border-b-2 border-cyan-500/50"></div>
-          {/* Status Banner */}
-          {isControlling && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-green-900/20 to-cyan-900/20 border border-cyan-500/50 relative">
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent animate-pulse"></div>
+        <div className="bg-green-950/80 backdrop-blur-sm border-4 border-red-500/50 rounded-xl p-8 mb-8 relative overflow-hidden shadow-2xl shadow-red-500/20">
+          {/* Christmas ornament corners */}
+          <div className="absolute top-2 left-2 text-3xl">🎁</div>
+          <div className="absolute top-2 right-2 text-3xl">🎁</div>
+          <div className="absolute bottom-2 left-2 text-3xl">⛄</div>
+          <div className="absolute bottom-2 right-2 text-3xl">⛄</div>
+
+          {/* Status Banner - Your Turn! */}
+          {isYourTurn && (
+            <div className="mb-6 p-6 bg-gradient-to-r from-green-800/50 to-red-800/50 border-2 border-green-400 rounded-lg relative animate-pulse">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 via-red-400 to-green-400"></div>
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-lg font-bold text-cyan-400 tracking-wider uppercase">
-                    [ACTIVE CONTROL]
+                  <h2 className="text-2xl font-bold text-green-300 tracking-wider uppercase">
+                    🎉 IT'S YOUR TURN! 🎉
                   </h2>
-                  <p className="text-sm text-gray-400 font-mono">
-                    &gt; TRANSMITTING TO CONCRETE CANOPY_
+                  <p className="text-lg text-green-100 mt-2">
+                    Your Christmas theme is now displayed!
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-mono font-bold text-cyan-400 tabular-nums">
+                  <div className="text-4xl font-bold text-green-300 tabular-nums">
                     {formatTime(remainingTime)}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider">Cycles Remaining</div>
+                  <div className="text-sm text-green-200 uppercase tracking-wider">Time Remaining</div>
                 </div>
               </div>
               {/* Progress bar */}
-              <div className="mt-3 h-1 bg-gray-800 overflow-hidden">
+              <div className="mt-4 h-2 bg-green-950 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-cyan-500 to-green-500 transition-all duration-1000 ease-linear shadow-lg shadow-cyan-500/50"
-                  style={{ width: `${(remainingTime / 30) * 100}%` }}
+                  className="h-full bg-gradient-to-r from-green-400 to-red-400 transition-all duration-1000 ease-linear"
+                  style={{ width: `${(remainingTime / 60) * 100}%` }}
                 />
               </div>
             </div>
           )}
 
           {isInQueue && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/50 relative">
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent"></div>
-              <h2 className="text-lg font-bold text-purple-400 tracking-wider uppercase">
-                [QUEUE::POSITION]
+            <div className="mb-6 p-6 bg-gradient-to-r from-red-900/50 to-green-900/50 border-2 border-yellow-400 rounded-lg relative">
+              <h2 className="text-2xl font-bold text-yellow-300 tracking-wider uppercase text-center">
+                🎄 In Queue 🎄
               </h2>
-              <p className="text-sm text-gray-400 font-mono mt-2">
-                RANK: <span className="text-purple-400 font-bold text-xl">{queuePosition}</span> / {queueLength}
+              <p className="text-center text-xl text-green-100 mt-4">
+                Position: <span className="text-yellow-300 font-bold text-3xl">{queuePosition}</span> of {queueLength}
               </p>
-              <p className="text-xs text-gray-500 mt-1 font-mono">
-                ETA: {formatTime(queuePosition * 30)}
+              <p className="text-center text-lg text-green-200 mt-2">
+                Estimated wait: {formatTime(queuePosition * 60)}
               </p>
             </div>
           )}
 
-          {/* Slider Component */}
-          <div className="mb-8">
-            <Slider
-              value={sliderValue}
-              onChange={handleSliderChange}
-              disabled={!isControlling}
-            />
-          </div>
+          {/* Theme Selector */}
+          {showSubmitButton && (
+            <div className="mb-8">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-green-200 mb-2">
+                  ✨ Pick Your Christmas Theme ✨
+                </h2>
+                <p className="text-green-100">
+                  Swipe or click to select options from each category
+                </p>
+              </div>
+              <ThemeSelector
+                row1Options={colorOptions}
+                row2Options={patternOptions}
+                row3Options={effectOptions}
+                selectedRow1={selectedRow1}
+                selectedRow2={selectedRow2}
+                selectedRow3={selectedRow3}
+                onRow1Change={setSelectedRow1}
+                onRow2Change={setSelectedRow2}
+                onRow3Change={setSelectedRow3}
+                disabled={false}
+              />
+            </div>
+          )}
+
+          {/* Display selected theme when in queue or active */}
+          {(isInQueue || isYourTurn) && (
+            <div className="mb-6 p-4 bg-black/30 border-2 border-green-400 rounded-lg">
+              <h3 className="text-center text-lg font-bold text-green-300 mb-3">
+                Your Christmas Theme
+              </h3>
+              <div className="flex justify-center gap-8 text-center">
+                <div>
+                  <div className="text-5xl mb-2">
+                    {colorOptions.find(o => o.id === selectedRow1)?.symbol}
+                  </div>
+                  <div className="text-green-200 text-sm">
+                    {colorOptions.find(o => o.id === selectedRow1)?.name}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-5xl mb-2">
+                    {patternOptions.find(o => o.id === selectedRow2)?.symbol}
+                  </div>
+                  <div className="text-green-200 text-sm">
+                    {patternOptions.find(o => o.id === selectedRow2)?.name}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-5xl mb-2">
+                    {effectOptions.find(o => o.id === selectedRow3)?.symbol}
+                  </div>
+                  <div className="text-green-200 text-sm">
+                    {effectOptions.find(o => o.id === selectedRow3)?.name}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-center">
-            {showJoinButton && (
+            {showSubmitButton && (
               <button
-                onClick={handleJoinQueue}
-                className="group relative px-10 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold uppercase tracking-wider transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 overflow-hidden"
+                onClick={handleSubmit}
+                className="group relative px-12 py-5 bg-gradient-to-r from-red-600 to-green-600 text-white text-xl font-bold uppercase tracking-wider transition-all hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 rounded-lg overflow-hidden"
               >
-                <span className="relative z-10">[ENTER QUEUE]</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg blur opacity-30 group-hover:opacity-100 transition-opacity animate-pulse"></div>
+                <span className="relative z-10">🎄 Submit & Join Queue 🎄</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </button>
             )}
 
-            {showRejoinButton && (
+            {isYourTurn && (
               <div className="text-center">
-                <p className="text-red-400 mb-4 font-mono uppercase tracking-wide">
-                  [SESSION::TERMINATED] - REINITIALIZE?
-                </p>
-                <button
-                  onClick={handleRejoinQueue}
-                  className="group relative px-10 py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold uppercase tracking-wider transition-all hover:scale-105 hover:shadow-2xl hover:shadow-red-500/50 overflow-hidden"
-                >
-                  <span className="relative z-10">[REQUEUE]</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </button>
-              </div>
-            )}
-
-            {(isInQueue || isControlling) && (
-              <div className="text-center">
-                <p className="text-gray-400 text-sm font-mono">
-                  {isControlling 
-                    ? '> SIGNAL_TRANSMISSION::ACTIVE | CONCRETE_CANOPY_LINK::ESTABLISHED'
-                    : `> STANDBY_MODE | QUEUE_AHEAD::${queuePosition - 1} ${queuePosition - 1 === 1 ? 'USER' : 'USERS'}`
-                  }
+                <p className="text-green-200 text-lg animate-pulse">
+                  ✨ Enjoy your minute of Christmas magic! ✨
                 </p>
               </div>
             )}
@@ -190,32 +219,32 @@ export default function Home() {
         </div>
 
         {/* Queue Information */}
-        <div className="bg-gray-900/90 backdrop-blur-sm border border-red-500/30 p-6 relative">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
-          <h3 className="text-lg font-bold text-red-400 mb-3 uppercase tracking-wider">
-            [SYSTEM::METRICS]
+        <div className="bg-green-950/80 backdrop-blur-sm border-2 border-yellow-500/50 p-6 rounded-lg shadow-lg">
+          <h3 className="text-2xl font-bold text-yellow-300 mb-4 uppercase tracking-wider text-center">
+            🎅 Queue Status 🎅
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-black/50 border border-gray-800">
-              <div className="text-3xl font-mono font-bold text-cyan-400 tabular-nums">
-                {queueLength.toString().padStart(2, '0')}
+            <div className="text-center p-4 bg-red-900/30 border-2 border-green-500 rounded-lg">
+              <div className="text-4xl font-bold text-green-300 tabular-nums">
+                {queueLength}
               </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mt-2">USERS_IN_QUEUE</div>
+              <div className="text-sm text-green-200 uppercase tracking-wider mt-2">People Waiting</div>
             </div>
-            <div className="text-center p-3 bg-black/50 border border-gray-800">
-              <div className="text-3xl font-mono font-bold text-purple-400">
-                {isControlling ? 'LIVE' : queuePosition > 0 ? `#${queuePosition.toString().padStart(2, '0')}` : 'NULL'}
+            <div className="text-center p-4 bg-green-900/30 border-2 border-red-500 rounded-lg">
+              <div className="text-4xl font-bold text-red-300">
+                {isYourTurn ? '🎉' : queuePosition > 0 ? `#${queuePosition}` : '—'}
               </div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mt-2">STATUS_CODE</div>
+              <div className="text-sm text-red-200 uppercase tracking-wider mt-2">Your Position</div>
             </div>
           </div>
         </div>
 
         {/* Instructions */}
-        <div className="mt-8 text-center text-xs text-gray-600 font-mono uppercase tracking-wider">
-          <p className="mb-1">&lt; CYCLE_TIME::30_SECONDS &gt;</p>
-          <p>&lt; VALUE_RANGE::-1.000_TO_1.000 &gt;</p>
-          <p className="text-cyan-600 mt-2">[ REALTIME_TRANSMISSION::ENABLED ]</p>
+        <div className="mt-8 text-center text-green-100">
+          <p className="text-lg mb-2">⏱️ Each turn lasts 1 minute</p>
+          <p className="text-sm text-green-200">
+            Pick your favorite Christmas theme and watch it come to life!
+          </p>
         </div>
       </div>
       

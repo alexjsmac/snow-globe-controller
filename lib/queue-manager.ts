@@ -99,6 +99,25 @@ export class FirebaseQueueManager {
   }
 
   /**
+   * Store theme selection when user joins queue
+   */
+  async storeThemeSelection(sessionId: string, row1: string, row2: string, row3: string): Promise<void> {
+    try {
+      const themeRef = ref(realtimeDb, `queue/themes/${sessionId}`);
+      await set(themeRef, {
+        row1,
+        row2,
+        row3,
+        submittedAt: rtdbServerTimestamp(),
+      });
+      console.log(`Theme selection stored for ${sessionId}`);
+    } catch (error) {
+      console.error('Error storing theme selection:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Activate the next user in queue
    */
   async activateNextUser(): Promise<void> {
@@ -121,7 +140,7 @@ export class FirebaseQueueManager {
 
         if (nextUser) {
           const now = Date.now();
-          const endTime = now + 30 * 1000; // 30 seconds from now
+          const endTime = now + 60 * 1000; // 60 seconds (1 minute) from now
 
           // Set as active user
           const activeUserRef = ref(realtimeDb, 'queue/activeUser');
@@ -129,7 +148,7 @@ export class FirebaseQueueManager {
             sessionId: nextUser.sessionId,
             startTime: now,
             endTime,
-            remainingTime: 30
+            remainingTime: 60
           });
 
           // Remove from waiting queue
@@ -139,10 +158,10 @@ export class FirebaseQueueManager {
           this.activeSessionData = [];
           this.startValueCollection();
 
-          // Set timer to deactivate after 30 seconds
+          // Set timer to deactivate after 60 seconds
           setTimeout(() => {
             this.deactivateCurrentUser();
-          }, 30000);
+          }, 60000);
 
           console.log(`User ${nextUser.sessionId} activated`);
         }

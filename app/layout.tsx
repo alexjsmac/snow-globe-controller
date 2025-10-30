@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Concrete Canopy",
-  description: "Interactive queue-based slider control for Concrete Canopy projection mapping",
+  title: "Christmas Magic Installation",
+  description: "Interactive Christmas-themed installation - Pick your theme and join the queue!",
 };
 
 export default function RootLayout({
