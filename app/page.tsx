@@ -98,7 +98,7 @@ export default function Home() {
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-green-300 tracking-wider uppercase">
-                    🎉 IT'S YOUR TURN! 🎉
+                    🎉 IT&apos;S YOUR TURN! 🎉
                   </h2>
                   <p className="text-lg text-green-100 mt-2">
                     Your Christmas theme is now displayed!

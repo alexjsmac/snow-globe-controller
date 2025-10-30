@@ -45,6 +45,10 @@ export class QueueMonitor {
    * Check if active user's time has expired and advance queue if needed
    */
   private async checkAndAdvanceQueue(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
     try {
       const activeUserRef = ref(realtimeDb, 'queue/activeUser');
       const snapshot = await get(activeUserRef);
@@ -76,6 +80,10 @@ export class QueueMonitor {
    * Activate the next user in the waiting queue
    */
   private async activateNextUser(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
     try {
       // Get waiting users
       const waitingUsersRef = ref(realtimeDb, 'queue/waitingUsers');

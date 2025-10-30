@@ -39,6 +39,9 @@ class AdminOperations {
 
   // Get real-time queue statistics
   async getQueueStatistics(): Promise<QueueStatistics> {
+    if (!realtimeDb || !firestore) {
+      throw new Error('Firebase is not initialized');
+    }
     try {
       // Get queue data
       const queueRef = ref(realtimeDb, 'queue');
@@ -144,6 +147,10 @@ class AdminOperations {
 
   // Subscribe to real-time queue updates
   subscribeToQueueStats(callback: (stats: QueueStatistics) => void): () => void {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return () => {};
+    }
     this.statsListener = callback;
     
     // Set up real-time listeners
@@ -184,6 +191,12 @@ class AdminOperations {
 
   // Reset queue with options
   async resetQueue(options: ResetOptions = {}): Promise<ResetResult> {
+    if (!realtimeDb || !firestore) {
+      return {
+        success: false,
+        errors: ['Firebase is not initialized']
+      };
+    }
     try {
       const promises: Promise<void>[] = [];
       const errors: string[] = [];
@@ -255,6 +268,10 @@ class AdminOperations {
 
   // Get recent sessions
   async getRecentSessions(limitCount: number = 10): Promise<SessionSummary[]> {
+    if (!firestore) {
+      console.error('Firestore is not initialized');
+      return [];
+    }
     const sessionsRef = collection(firestore, 'sessions');
     const q = query(sessionsRef, orderBy('startTime', 'desc'), limit(limitCount));
     const snapshot = await getDocs(q);
@@ -294,6 +311,10 @@ class AdminOperations {
 
   // Remove specific user from queue
   async removeUserFromQueue(sessionId: string): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
     try {
       // Check if user is active
       const queueRef = ref(realtimeDb, 'queue');
@@ -334,6 +355,10 @@ class AdminOperations {
 
   // Skip current active user and move to next
   async skipActiveUser(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
     try {
       const queueRef = ref(realtimeDb, 'queue/activeUser');
       const snapshot = await get(queueRef);

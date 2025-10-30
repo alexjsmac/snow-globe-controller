@@ -6,6 +6,10 @@ import { ref, set, serverTimestamp as rtdbServerTimestamp } from 'firebase/datab
  * This is the main function to call when updating slider values
  */
 export async function updateSliderValue(value: number, sessionId: string): Promise<void> {
+  if (!realtimeDb) {
+    console.error('Firebase Realtime Database is not initialized');
+    return;
+  }
   try {
     const sliderRef = ref(realtimeDb, 'sliderValues/current');
     await set(sliderRef, {

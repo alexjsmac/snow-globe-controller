@@ -11,6 +11,10 @@ export async function updateThemeSelection(
   row3: string,
   sessionId: string
 ): Promise<void> {
+  if (!realtimeDb) {
+    console.error('Firebase Realtime Database is not initialized');
+    return;
+  }
   try {
     const themeRef = ref(realtimeDb, 'themeValues/current');
     await set(themeRef, {

@@ -40,6 +40,10 @@ export async function saveSessionSummary(
   endTime: Date,
   valueHistory: SessionValueHistory[]
 ): Promise<void> {
+  if (!firestore) {
+    console.error('Firestore is not initialized');
+    return;
+  }
   try {
     if (valueHistory.length === 0) {
       console.log(`No data to save for session ${sessionId}`);
