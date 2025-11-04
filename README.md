@@ -1,36 +1,41 @@
-# TouchDesigner Queue Controller
+# Snow Globe Controller
 
-A real-time, queue-based interactive control system for TouchDesigner installations. Originally designed for slider control, now featuring a Christmas-themed installation with customizable theme selection.
+A real-time, queue-based interactive control system for TouchDesigner installations featuring a Christmas-themed installation with customizable theme selection. Users can select from combinations of colors, patterns, and effects to create their personalized Christmas theme displayed on a physical installation.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.5.1-black.svg)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange.svg)
 
-## 🎄 Christmas Theme Installation
+## 🎄 Christmas Magic Installation
 
 ![Christmas Magic Installation](https://github.com/user-attachments/assets/3d21e848-a614-4d9c-9514-d926c498557e)
 
-The latest version features a Christmas-themed interactive installation where users can:
-- **Select a theme** from 3 customizable rows (Color, Pattern, Effect)
+This interactive Christmas installation allows users to:
+- **Select a theme** from 3 customizable categories (Color, Pattern, Effect)
 - **Join a queue** and wait for their turn
-- **See their theme displayed** for 1 minute when it's their turn
+- **See their theme displayed** for 60 seconds when activated
 - **Experience real-time updates** as the queue progresses
+- **Admin monitoring** via password-protected dashboard
 
-### Theme Options
-- **Colors**: 🔴 Red, 🟢 Green, 🟡 Gold
-- **Patterns**: ❄️ Snowflakes, ⭐ Stars, 💡 Lights
-- **Effects**: ✨ Sparkle, 💫 Pulse, 🌊 Wave
+### 🎨 Theme Categories
 
-## 🎮 Original Slider Mode
+**🎨 Color Options:**
+- 🔴 **Red** - Classic Christmas red
+- 🟢 **Green** - Traditional Christmas green  
+- 🟡 **Gold** - Elegant golden accents
 
-The original slider control system is still available where users can:
-- Join a queue to control a slider interface
-- Take turns controlling the slider (configurable duration)
-- Send real-time values (-1 to 1) to TouchDesigner
-- View their queue position and wait time
+**✨ Pattern Options:**
+- ❄️ **Snowflakes** - Delicate winter snowflakes
+- ⭐ **Stars** - Twinkling holiday stars
+- 💡 **Lights** - Festive Christmas lights
 
-Perfect for interactive installations, collaborative performances, or live VJ sessions where audience participation enhances the visual experience.
+**🎭 Effect Options:**
+- ✨ **Sparkle** - Gentle sparkling animation
+- 💫 **Pulse** - Rhythmic pulsing effect
+- 🌊 **Wave** - Flowing wave motion
+
+Perfect for holiday displays, museum installations, retail environments, or any interactive Christmas experience where audience participation creates magical visual moments.
 
 ## 🏗️ Architecture
 
@@ -53,7 +58,7 @@ User → Web Interface → Firebase Realtime DB → Queue Management
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18.0.0 or higher
+- Node.js 22.0.0 or higher (as specified in project rules)
 - npm or yarn
 - Firebase account with Firestore and Realtime Database enabled
 - TouchDesigner (for receiving data)
@@ -62,8 +67,8 @@ User → Web Interface → Firebase Realtime DB → Queue Management
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/touchdesigner-slider-queue.git
-   cd touchdesigner-slider-queue
+   git clone https://github.com/alexjsmac/snow-globe-controller.git
+   cd snow-globe-controller
    ```
 
 2. **Install dependencies**
@@ -81,7 +86,7 @@ User → Web Interface → Firebase Realtime DB → Queue Management
    NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
    NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-id-default-rtdb.firebaseio.com/
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=s3nsora-dev
    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-storage-bucket
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
    NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
@@ -149,24 +154,13 @@ service cloud.firestore {
 
 ### Firebase Data Sources
 
-**Christmas Theme Mode** - Current theme selection:
+**Christmas Theme Data** - Current theme selection:
    ```json
    // /themeValues/current
    {
-     "row1": "green",         // Selected color option
-     "row2": "snowflakes",    // Selected pattern option
-     "row3": "wave",          // Selected effect option
-     "sessionId": "uuid",     // Unique session identifier
-     "timestamp": 1234567890  // Unix timestamp
-   }
-   ```
-
-**Slider Mode** - Current slider value:
-   ```json
-   // /sliderValues/current
-   {
-     "value": -0.5,           // Raw slider value (-1 to 1)
-     "normalizedValue": 0.25, // Normalized value (0 to 1)
+     "row1": "green",         // Selected color: red, green, gold
+     "row2": "snowflakes",    // Selected pattern: snowflakes, stars, lights
+     "row3": "wave",          // Selected effect: sparkle, pulse, wave
      "sessionId": "uuid",     // Unique session identifier
      "timestamp": 1234567890  // Unix timestamp
    }
@@ -192,22 +186,14 @@ service cloud.firestore {
 
 ### TouchDesigner Setup
 
-1. **Christmas Theme Mode**:
-   ```python
-   # In TouchDesigner, use Web Client DAT
-   # URL: https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/themeValues/current.json
-   # Method: GET
-   # Poll every 1-5 seconds (themes change every 60 seconds)
-   # Parse JSON to get row1, row2, row3 values
-   ```
-
-2. **Slider Mode**:
-   ```python
-   # In TouchDesigner, use Web Client DAT
-   # URL: https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/sliderValues/current.json
-   # Method: GET
-   # Poll every 50-100ms for real-time updates
-   ```
+**Realtime Theme Data:**
+```python
+# In TouchDesigner, use Web Client DAT
+# URL: https://s3nsora-dev-default-rtdb.firebaseio.com/themeValues/current.json
+# Method: GET
+# Poll every 1-5 seconds (themes change every 60 seconds)
+# Parse JSON to get row1 (color), row2 (pattern), row3 (effect) values
+```
 
 2. **Firestore Session History** (requires authentication):
    ```python
@@ -240,49 +226,74 @@ npm run lint
 
 # Export static site
 npm run export
+
+# Queue management scripts
+npm run reset-queue          # Interactive queue reset
+npm run admin-reset          # Admin reset with service account
+npm run touchdesigner:token  # Generate OAuth2 token for TouchDesigner
+npm run analyze-trends       # Analyze session data trends
 ```
 
 ### Project Structure
 
 ```
-touchdesigner-slider-queue/
-├── app/                    # Next.js app directory
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Main queue interface
-├── components/          
-│   └── Slider.tsx         # Slider UI component
+snow-globe-controller/
+├── app/                       # Next.js app directory
+│   ├── admin/                # Admin dashboard
+│   │   ├── analytics/        # Analytics page
+│   │   └── page.tsx         # Main admin interface
+│   ├── layout.tsx           # Root layout
+│   └── page.tsx             # Main Christmas theme interface
+├── components/              
+│   ├── ThemeSelector.tsx    # Christmas theme selection UI
+│   ├── Footer.tsx           # Footer component
+│   └── QueueMonitorProvider.tsx # Queue monitoring context
 ├── hooks/
-│   └── useFirebaseQueue.ts # Firebase React hook
+│   ├── useFirebaseQueue.ts  # Firebase queue management hook
+│   └── useAdminAuth.ts      # Admin authentication hook
 ├── lib/
-│   ├── firebase.ts        # Firebase configuration
-│   ├── firebase-queue.ts  # Firebase queue manager
-│   └── types.ts           # TypeScript type definitions
-├── public/                # Static assets
-├── firestore.rules        # Firestore security rules
-└── database.rules.json    # Realtime Database security rules
+│   ├── firebase-config.ts   # Firebase configuration
+│   ├── queue-manager.ts     # Core queue management logic
+│   ├── theme-options.ts     # Christmas theme definitions
+│   ├── theme-service.ts     # Theme data management
+│   ├── admin-operations.ts  # Admin functionality
+│   └── types.ts             # TypeScript type definitions
+├── scripts/                 # Utility scripts
+│   ├── reset-queue.js       # Queue reset utility
+│   ├── admin-reset.js       # Admin reset utility
+│   ├── generate-touchdesigner-token.js # OAuth token generator
+│   └── analyze-trends.js    # Data analysis utility
+├── docs/                    # Documentation
+├── public/                  # Static assets
+├── firestore.rules          # Firestore security rules
+└── database.rules.json      # Realtime Database security rules
 ```
 
 ### Key Components
 
-- **FirebaseQueueManager**: Handles user queue ordering, timing, and progression
-- **Firebase Realtime Database**: Manages live queue state and current values
+- **QueueManager**: Handles user queue ordering, timing, and progression (60-second turns)
+- **ThemeSelector**: Interactive Christmas theme selection with swipe/click controls
+- **Firebase Realtime Database**: Manages live queue state and current theme values
 - **useFirebaseQueue Hook**: Provides real-time state to React components
-- **Slider Component**: Interactive slider with throttled updates
+- **Admin Dashboard**: Password-protected interface for queue monitoring and management
+- **Theme Service**: Manages theme data transmission to TouchDesigner
 
 ## ⚙️ Configuration
 
 ### Modifying Queue Duration
 
-To change the turn duration (currently 60 seconds for Christmas theme), update in `lib/queue-manager.ts`:
-- Line ~163: `endTime` calculation (60 * 1000 = 60 seconds)
-- Line ~183: `setTimeout` duration (60000 = 60 seconds)
-- Update progress bar calculations in component files (divide by 60)
+To change the turn duration (currently 60 seconds for Christmas themes), update in `lib/queue-manager.ts`:
+- Search for timer duration constants (60 * 1000 = 60 seconds)
+- Update progress bar calculations in `app/page.tsx` (divide by new duration)
+- Ensure consistency across all time-related UI components
 
-### Adjusting Sampling Rate
+### Customizing Theme Options
 
-The client samples slider values every 100ms. To modify:
-- Update throttle value in `hooks/useFirebaseQueue.ts`
-- Adjust sampling interval in `lib/firebase-queue.ts`
+To modify available Christmas theme options, edit `lib/theme-options.ts`:
+- `colorOptions`: Available color selections (Red, Green, Gold)
+- `patternOptions`: Available pattern selections (Snowflakes, Stars, Lights)  
+- `effectOptions`: Available effect selections (Sparkle, Pulse, Wave)
+- Each option requires `id`, `symbol`, and `name` properties
 
 ### Environment Variables
 
@@ -291,10 +302,11 @@ The client samples slider values every 100ms. To modify:
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | Yes |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | Yes |
 | `NEXT_PUBLIC_FIREBASE_DATABASE_URL` | Firebase Realtime Database URL | Yes |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID | Yes |
+|| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID (use 's3nsora-dev' for development) | Yes |
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | Yes |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID | Yes |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | Yes |
+|| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | Yes |
+|| `NEXT_PUBLIC_ADMIN_PASSWORD_HASH` | Hashed password for admin dashboard access | Optional |
 
 ## 🐛 Troubleshooting
 
@@ -316,10 +328,11 @@ The client samples slider values every 100ms. To modify:
    - Verify Firebase Realtime Database rules allow read/write
    - Test with multiple browser windows/tabs
 
-4. **Slider Not Responding**
+4. **Theme Not Updating**
    - Ensure user is active (position 0 in queue)
    - Check Firebase connection status in console
-   - Verify slider component is not disabled
+   - Verify theme selector is not disabled
+   - Confirm theme submission was successful
 
 ### Firebase Console
 
@@ -332,7 +345,7 @@ https://console.firebase.google.com/project/YOUR_PROJECT_ID/database
 https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore
 
 # Current queue state: /queue
-# Current slider value: /sliderValues/current
+# Current theme values: /themeValues/current
 # Session summaries: /sessions collection
 ```
 
@@ -340,7 +353,7 @@ https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore
 
 Enable debug logging by setting in browser console:
 ```javascript
-localStorage.setItem('debug', 'slider-queue:*');
+localStorage.setItem('debug', 'snow-globe:*');
 ```
 
 ## 🚀 Production Deployment
@@ -388,10 +401,11 @@ CMD ["npm", "start"]
 ## 📊 Performance & Monitoring
 
 ### Performance Metrics
-- Slider updates throttled to 100ms intervals
-- Firebase handles 300+ data points per 30-second session
+- Theme updates sent immediately upon selection (no throttling needed)
+- Firebase handles queue state changes efficiently with minimal latency
+- 60-second turn duration optimized for user engagement
 - Firebase writes are fire-and-forget for low latency
-- Firebase Realtime Database provides sub-100ms updates
+- Firebase Realtime Database provides sub-100ms queue updates
 - React re-renders optimized with proper dependency arrays
 
 ### Monitoring
@@ -411,15 +425,18 @@ CMD ["npm", "start"]
 
 ### Manual Testing
 - Open multiple browser tabs to simulate multiple users
-- Test queue ordering and position updates
-- Verify timer functionality and automatic progression
+- Test queue ordering and position updates  
+- Verify 60-second timer functionality and automatic progression
+- Test theme selection and real-time updates to TouchDesigner
+- Test admin dashboard functionality with correct password
 - Test reconnection after network interruption
 
 ### Automated Testing (Future)
 - Unit tests for queue management logic
-- Integration tests for Socket.IO connections
-- End-to-end tests for user flows
+- Integration tests for Firebase connections
+- End-to-end tests for theme selection flows
 - Firebase emulator tests
+- Admin dashboard functionality tests
 
 ## 🤝 Contributing
 
@@ -440,10 +457,10 @@ CMD ["npm", "start"]
 
 ### Firebase API Reference
 
-**Key Functions in FirebaseQueueManager:**
+**Key Functions in QueueManager:**
 - `joinQueue(sessionId)`: Add user to queue
-- `leaveQueue(sessionId)`: Remove user from queue
-- `updateSliderValue(sessionId, value)`: Send slider value
+- `leaveQueue(sessionId)`: Remove user from queue  
+- `submitTheme(sessionId, row1, row2, row3)`: Submit Christmas theme selection
 - `listenToQueueState(callback)`: Subscribe to queue updates
 - `generateSessionId()`: Create unique session ID
 
@@ -451,7 +468,7 @@ CMD ["npm", "start"]
 - `/queue/activeUser`: Current active user data
 - `/queue/waitingUsers/{sessionId}`: User in waiting queue
 - `/queue/queueLength`: Number of users waiting
-- `/sliderValues/current`: Latest slider value
+- `/themeValues/current`: Current Christmas theme values
 
 ### Firestore Schema
 

@@ -1,18 +1,14 @@
 import { realtimeDb } from './firebase-config';
 import { ref, set, remove, onValue, off, serverTimestamp as rtdbServerTimestamp } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
-import { updateSliderValue } from './slider-service';
-import { saveSessionSummary } from './session-service';
-import type { 
+import type {
   QueueUser, 
   ActiveUser, 
-  QueueState, 
-  SliderData, 
-  SessionValueHistory 
+  QueueState
 } from './types';
 
 // Re-export types for convenience
-export type { QueueUser, ActiveUser, QueueState, SliderData };
+export type { QueueUser, ActiveUser, QueueState };
 
 /**
  * Firebase Queue Manager
@@ -20,10 +16,6 @@ export type { QueueUser, ActiveUser, QueueState, SliderData };
  */
 export class FirebaseQueueManager {
   private queueUnsubscribe: (() => void) | null = null;
-  private sliderUnsubscribe: (() => void) | null = null;
-  private activeSessionData: SessionValueHistory[] = [];
-  private valueCollectionInterval: NodeJS.Timeout | null = null;
-  private lastSliderValue: number = 0;
 
   /**
    * Generate a unique session ID for a user
@@ -79,34 +71,6 @@ export class FirebaseQueueManager {
       console.log(`User ${sessionId} left queue`);
     } catch (error) {
       console.error('Error leaving queue:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update slider value (only if user is active)
-   */
-  async updateSliderValue(sessionId: string, value: number): Promise<void> {
-    if (!realtimeDb) {
-      console.error('Firebase Realtime Database is not initialized');
-      return;
-    }
-    const db = realtimeDb; // Capture for use in callback
-    try {
-      // Check if user is currently active
-      const activeUserRef = ref(db, 'queue/activeUser');
-      
-      onValue(activeUserRef, async (snapshot) => {
-        const activeUser = snapshot.val() as ActiveUser | null;
-        
-        if (activeUser && activeUser.sessionId === sessionId) {
-          this.lastSliderValue = value;
-          await updateSliderValue(value, sessionId);
-        }
-      }, { onlyOnce: true });
-      
-    } catch (error) {
-      console.error('Error updating slider value:', error);
       throw error;
     }
   }
@@ -176,10 +140,6 @@ export class FirebaseQueueManager {
           // Remove from waiting queue
           await this.leaveQueue(nextUser.sessionId);
 
-          // Reset session data collection
-          this.activeSessionData = [];
-          this.startValueCollection();
-
           // Set timer to deactivate after 60 seconds
           setTimeout(() => {
             this.deactivateCurrentUser();
@@ -212,34 +172,19 @@ export class FirebaseQueueManager {
         const activeUser = snapshot.val() as ActiveUser | null;
         
         if (activeUser) {
-          // Stop value collection
-          this.stopValueCollection();
-          
-          // Save session data to Firebase
-          if (this.activeSessionData.length > 0) {
-            const startTime = new Date(activeUser.startTime);
-            const endTime = new Date();
-            await saveSessionSummary(activeUser.sessionId, startTime, endTime, this.activeSessionData);
-          }
-
           // Remove active user
           await remove(activeUserRef);
-
-          // Reset slider value
-          this.lastSliderValue = 0;
           
           console.log(`User ${activeUser.sessionId} deactivated`);
 
-          // Check if queue is empty and reset slider if needed
+          // Check if queue is empty or activate next user
           const waitingUsersRef = ref(db, 'queue/waitingUsers');
           onValue(waitingUsersRef, async (waitingSnapshot) => {
             const waitingUsers = waitingSnapshot.val();
             const queueEmpty = !waitingUsers || Object.keys(waitingUsers).length === 0;
             
             if (queueEmpty) {
-              // No more users in queue, reset slider to 0
-              await updateSliderValue(0, 'system');
-              console.log('Last user deactivated and queue empty - reset slider value to 0');
+              console.log('Last user deactivated and queue empty');
             } else {
               // Activate next user if queue not empty
               setTimeout(() => this.activateNextUser(), 100);
@@ -251,30 +196,6 @@ export class FirebaseQueueManager {
     } catch (error) {
       console.error('Error deactivating current user:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Start collecting slider values every 100ms during active session
-   */
-  private startValueCollection(): void {
-    this.stopValueCollection(); // Clear any existing interval
-
-    this.valueCollectionInterval = setInterval(() => {
-      this.activeSessionData.push({
-        timestamp: new Date(),
-        value: this.lastSliderValue
-      });
-    }, 100);
-  }
-
-  /**
-   * Stop collecting slider values
-   */
-  private stopValueCollection(): void {
-    if (this.valueCollectionInterval) {
-      clearInterval(this.valueCollectionInterval);
-      this.valueCollectionInterval = null;
     }
   }
 
@@ -306,7 +227,7 @@ export class FirebaseQueueManager {
   }
 
   /**
-   * Update queue length counter and reset slider value when queue is empty
+   * Update queue length counter
    */
   private async updateQueueLength(): Promise<void> {
     if (!realtimeDb) {
@@ -323,20 +244,6 @@ export class FirebaseQueueManager {
         
         const queueLengthRef = ref(db, 'queue/queueLength');
         await set(queueLengthRef, count);
-        
-        // Reset slider value to 0 when queue becomes empty
-        if (count === 0) {
-          // Check if there's also no active user
-          const activeUserRef = ref(db, 'queue/activeUser');
-          onValue(activeUserRef, async (activeSnapshot) => {
-            const activeUser = activeSnapshot.val();
-            if (!activeUser) {
-              // No users in queue and no active user, reset slider to 0
-              await updateSliderValue(0, 'system');
-              console.log('Queue empty - reset slider value to 0');
-            }
-          }, { onlyOnce: true });
-        }
       }, { onlyOnce: true });
       
     } catch (error) {
@@ -377,24 +284,6 @@ export class FirebaseQueueManager {
     });
 
     return () => off(queueRef);
-  }
-
-  /**
-   * Listen to slider value changes
-   */
-  listenToSliderValues(callback: (sliderData: SliderData | null) => void): () => void {
-    if (!realtimeDb) {
-      console.error('Firebase Realtime Database is not initialized');
-      return () => {};
-    }
-    const sliderRef = ref(realtimeDb, 'sliderValues/current');
-    
-    onValue(sliderRef, (snapshot) => {
-      const data = snapshot.val() as SliderData | null;
-      callback(data);
-    });
-
-    return () => off(sliderRef);
   }
 
   /**
@@ -450,8 +339,7 @@ export class FirebaseQueueManager {
    * Cleanup - remove all listeners
    */
   cleanup(): void {
-    this.stopValueCollection();
-    // Additional cleanup if needed
+    // Cleanup if needed
   }
 }
 

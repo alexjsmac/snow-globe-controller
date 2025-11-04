@@ -22,22 +22,6 @@ export interface QueueState {
   queueLength: number;
 }
 
-// Slider data types (legacy)
-export interface SliderData {
-  value: number;
-  normalizedValue: number;
-  sessionId: string;
-  timestamp: number;
-}
-
-export interface SliderValuePayload {
-  value: number;
-  normalizedValue: number;
-  sessionId: string;
-  timestamp: object; // Firebase serverTimestamp
-  active?: boolean;
-}
-
 // Theme selection data types
 export interface ThemeData {
   row1: string;
@@ -56,12 +40,7 @@ export interface ThemeSelectionPayload {
   active?: boolean;
 }
 
-// Session data types
-export interface SessionValueHistory {
-  timestamp: Date;
-  value: number;
-}
-
+// Session data types (for admin dashboard)
 export interface SessionStatistics {
   average: number;
   min: number;
@@ -71,9 +50,9 @@ export interface SessionStatistics {
 
 export interface SessionSummary {
   sessionId: string;
-  startTime: number; // Timestamp in milliseconds
-  endTime: number;   // Timestamp in milliseconds
-  duration: number;  // Duration in seconds
+  startTime: number;
+  endTime: number;
+  duration: number;
   dataPoints: number;
   statistics: SessionStatistics;
 }
@@ -83,10 +62,6 @@ export interface FirebaseQueueData {
   activeUser?: ActiveUser;
   waitingUsers?: { [sessionId: string]: QueueUser };
   queueLength?: number;
-}
-
-export interface FirebaseSliderData {
-  current?: SliderData;
 }
 
 export interface FirebaseSessionData {

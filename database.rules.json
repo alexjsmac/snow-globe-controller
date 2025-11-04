@@ -20,18 +20,13 @@
         ".validate": "newData.isNumber() && newData.val() >= 0"
       }
     },
-    "sliderValues": {
+    "themeValues": {
       // Web app writes, TouchDesigner reads (allow public read for real-time updates)
       ".read": true,
       ".write": true,
       ".validate": true,
       "current": {
-        ".validate": "newData.hasChildren(['value', 'normalizedValue', 'sessionId', 'timestamp']) && newData.child('value').val() >= -1 && newData.child('value').val() <= 1 && newData.child('normalizedValue').val() >= 0 && newData.child('normalizedValue').val() <= 1"
-      },
-      "history": {
-        "$timestamp": {
-          ".validate": "newData.hasChildren(['value', 'sessionId', 'timestamp'])"
-        }
+        ".validate": "newData.hasChildren(['row1', 'row2', 'row3', 'sessionId', 'timestamp'])"
       }
     },
     "sessions": {

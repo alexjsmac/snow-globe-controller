@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { firebaseQueueManager, QueueState, SliderData, ActiveUser } from '../lib/queue-manager';
+import { firebaseQueueManager, QueueState, ActiveUser } from '../lib/queue-manager';
 
 interface UseFirebaseQueueReturn {
   isConnected: boolean;
@@ -12,7 +12,6 @@ interface UseFirebaseQueueReturn {
   remainingTime: number;
   joinQueue: () => void;
   rejoinQueue: () => void;
-  sendSliderValue: (value: number) => void;
   submitTheme: (row1: string, row2: string, row3: string) => Promise<void>;
 }
 
@@ -26,17 +25,16 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
   
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const queueUnsubscribe = useRef<(() => void) | null>(null);
-  const throttleTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize session ID
   useEffect(() => {
     // Check for existing session in localStorage
-    let storedSessionId = localStorage.getItem('sliderSessionId');
+    let storedSessionId = localStorage.getItem('christmasThemeSessionId');
     
     if (!storedSessionId) {
       // Generate new session ID using the queue manager
       storedSessionId = firebaseQueueManager.generateSessionId();
-      localStorage.setItem('sliderSessionId', storedSessionId);
+      localStorage.setItem('christmasThemeSessionId', storedSessionId);
     }
     
     setSessionId(storedSessionId);
@@ -127,24 +125,6 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     await joinQueue();
   }, [joinQueue]);
 
-  // Throttled slider value sending
-  const sendSliderValue = useCallback((value: number) => {
-    if (!sessionId || !isActive) return;
-
-    // Throttle to 100ms (10 updates per second)
-    if (throttleTimeout.current) {
-      clearTimeout(throttleTimeout.current);
-    }
-
-    throttleTimeout.current = setTimeout(async () => {
-      try {
-        await firebaseQueueManager.updateSliderValue(sessionId, value);
-      } catch (error) {
-        console.error('Error sending slider value:', error);
-      }
-    }, 100);
-  }, [sessionId, isActive]);
-
   // Submit theme selection and join queue
   const submitTheme = useCallback(async (row1: string, row2: string, row3: string) => {
     if (!sessionId) return;
@@ -170,7 +150,6 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     remainingTime,
     joinQueue,
     rejoinQueue,
-    sendSliderValue,
     submitTheme
   };
 }
