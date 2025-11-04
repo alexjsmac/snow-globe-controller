@@ -41,20 +41,26 @@ export interface ThemeSelectionPayload {
 }
 
 // Session data types (for admin dashboard)
-export interface SessionStatistics {
-  average: number;
-  min: number;
-  max: number;
-  standardDeviation: number;
-}
-
 export interface SessionSummary {
   sessionId: string;
   startTime: number;
   endTime: number;
   duration: number;
-  dataPoints: number;
-  statistics: SessionStatistics;
+  queueJoinTime?: number;
+  queueWaitTime?: number;
+  theme?: {
+    row1: string;
+    row2: string;
+    row3: string;
+  };
+  // Legacy fields for old slider sessions
+  dataPoints?: number;
+  statistics?: {
+    average: number;
+    min: number;
+    max: number;
+    standardDeviation: number;
+  };
 }
 
 // Firebase Realtime Database structure types

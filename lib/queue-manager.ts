@@ -1,6 +1,8 @@
 import { realtimeDb } from './firebase-config';
-import { ref, set, remove, onValue, off, serverTimestamp as rtdbServerTimestamp } from 'firebase/database';
+import { ref, set, remove, onValue, off, serverTimestamp as rtdbServerTimestamp, get } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
+import { updateThemeSelection } from './theme-service';
+import { saveThemeSession } from './session-service';
 import type {
   QueueUser, 
   ActiveUser, 
@@ -140,6 +142,21 @@ export class FirebaseQueueManager {
           // Remove from waiting queue
           await this.leaveQueue(nextUser.sessionId);
 
+          // Publish the user's theme to themeValues/current for TouchDesigner
+          const userThemeRef = ref(db, `queue/themes/${nextUser.sessionId}`);
+          onValue(userThemeRef, async (themeSnapshot) => {
+            const themeData = themeSnapshot.val();
+            if (themeData && themeData.row1 && themeData.row2 && themeData.row3) {
+              await updateThemeSelection(
+                themeData.row1,
+                themeData.row2,
+                themeData.row3,
+                nextUser.sessionId
+              );
+              console.log(`Theme published for ${nextUser.sessionId}:`, themeData);
+            }
+          }, { onlyOnce: true });
+
           // Set timer to deactivate after 60 seconds
           setTimeout(() => {
             this.deactivateCurrentUser();
@@ -172,6 +189,36 @@ export class FirebaseQueueManager {
         const activeUser = snapshot.val() as ActiveUser | null;
         
         if (activeUser) {
+          // Save session data before removing active user
+          try {
+            const userThemeRef = ref(db, `queue/themes/${activeUser.sessionId}`);
+            const themeSnapshot = await get(userThemeRef);
+            const themeData = themeSnapshot.val();
+            
+            if (themeData) {
+              const queueJoinTime = themeData.submittedAt || activeUser.startTime;
+              const queueWaitTime = Math.max(0, Math.floor((activeUser.startTime - queueJoinTime) / 1000));
+              
+              await saveThemeSession({
+                sessionId: activeUser.sessionId,
+                startTime: activeUser.startTime,
+                endTime: Date.now(),
+                duration: 60, // 60 second turns
+                queueJoinTime: queueJoinTime,
+                queueWaitTime: queueWaitTime,
+                theme: {
+                  row1: themeData.row1,
+                  row2: themeData.row2,
+                  row3: themeData.row3
+                }
+              });
+              
+              console.log(`Session saved for ${activeUser.sessionId} - waited ${queueWaitTime}s`);
+            }
+          } catch (error) {
+            console.error('Error saving session:', error);
+          }
+          
           // Remove active user
           await remove(activeUserRef);
           

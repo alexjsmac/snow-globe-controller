@@ -15,19 +15,17 @@
  * npm install firebase-admin google-auth-library
  */
 
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config({ path: '.env.local' });
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import admin from 'firebase-admin';
+import { GoogleAuth } from 'google-auth-library';
 
-// Try to import Firebase Admin SDK
-let admin;
-try {
-  admin = require('firebase-admin');
-} catch (error) {
-  console.log('❌ Firebase Admin SDK not found');
-  console.log('📦 Install with: npm install firebase-admin google-auth-library');
-  process.exit(1);
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: '.env.local' });
 
 class TouchDesignerAuthGenerator {
   constructor() {
@@ -74,7 +72,7 @@ class TouchDesignerAuthGenerator {
       }
 
       // Load service account
-      const serviceAccount = require(this.serviceAccountPath);
+      const serviceAccount = JSON.parse(fs.readFileSync(this.serviceAccountPath, 'utf8'));
       
       // Initialize Firebase Admin
       this.app = admin.initializeApp({
@@ -99,9 +97,6 @@ class TouchDesignerAuthGenerator {
    */
   async generateOAuthToken() {
     try {
-      // Import Google Auth Library
-      const { GoogleAuth } = require('google-auth-library');
-      
       // Create auth client with service account
       const auth = new GoogleAuth({
         keyFile: this.serviceAccountPath,
@@ -140,7 +135,7 @@ class TouchDesignerAuthGenerator {
    * Fallback: Provide service account information for direct usage
    */
   generateServiceAccountInfo() {
-    const serviceAccount = require(this.serviceAccountPath);
+    const serviceAccount = JSON.parse(fs.readFileSync(this.serviceAccountPath, 'utf8'));
     
     return {
       auth_type: 'service_account',
@@ -330,9 +325,7 @@ class TouchDesignerAuthGenerator {
 }
 
 // Execute if run directly
-if (require.main === module) {
-  const generator = new TouchDesignerAuthGenerator();
-  generator.execute();
-}
+const generator = new TouchDesignerAuthGenerator();
+generator.execute();
 
-module.exports = TouchDesignerAuthGenerator;
+export default TouchDesignerAuthGenerator;

@@ -297,12 +297,16 @@ class AdminOperations {
       }
       
       sessions.push({
-        sessionId: doc.id,
+        sessionId: data.sessionId || doc.id,
         startTime,
         endTime,
         duration: data.duration || 0,
-        dataPoints: data.dataPoints || 0,
-        statistics: data.statistics || { average: 0, min: 0, max: 0, standardDeviation: 0 }
+        queueJoinTime: data.queueJoinTime,
+        queueWaitTime: data.queueWaitTime,
+        theme: data.theme,
+        // Legacy fields for old slider sessions
+        dataPoints: data.dataPoints,
+        statistics: data.statistics
       });
     });
     
