@@ -13,6 +13,7 @@ interface UseFirebaseQueueReturn {
   joinQueue: () => void;
   rejoinQueue: () => void;
   sendSliderValue: (value: number) => void;
+  submitTheme: (row1: string, row2: string, row3: string) => Promise<void>;
 }
 
 export function useFirebaseQueue(): UseFirebaseQueueReturn {
@@ -144,6 +145,22 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     }, 100);
   }, [sessionId, isActive]);
 
+  // Submit theme selection and join queue
+  const submitTheme = useCallback(async (row1: string, row2: string, row3: string) => {
+    if (!sessionId) return;
+    
+    try {
+      // Store theme selection
+      await firebaseQueueManager.storeThemeSelection(sessionId, row1, row2, row3);
+      // Join queue
+      await firebaseQueueManager.joinQueue(sessionId);
+      console.log('Theme submitted and joined queue successfully');
+    } catch (error) {
+      console.error('Error submitting theme:', error);
+      throw error;
+    }
+  }, [sessionId]);
+
   return {
     isConnected,
     sessionId,
@@ -153,7 +170,8 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     remainingTime,
     joinQueue,
     rejoinQueue,
-    sendSliderValue
+    sendSliderValue,
+    submitTheme
   };
 }
 

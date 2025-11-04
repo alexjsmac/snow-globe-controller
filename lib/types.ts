@@ -22,7 +22,7 @@ export interface QueueState {
   queueLength: number;
 }
 
-// Slider data types
+// Slider data types (legacy)
 export interface SliderData {
   value: number;
   normalizedValue: number;
@@ -33,6 +33,24 @@ export interface SliderData {
 export interface SliderValuePayload {
   value: number;
   normalizedValue: number;
+  sessionId: string;
+  timestamp: object; // Firebase serverTimestamp
+  active?: boolean;
+}
+
+// Theme selection data types
+export interface ThemeData {
+  row1: string;
+  row2: string;
+  row3: string;
+  sessionId: string;
+  timestamp: number;
+}
+
+export interface ThemeSelectionPayload {
+  row1: string;
+  row2: string;
+  row3: string;
   sessionId: string;
   timestamp: object; // Firebase serverTimestamp
   active?: boolean;

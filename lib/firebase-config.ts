@@ -1,6 +1,6 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getDatabase, Database } from 'firebase/database';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,10 +12,19 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only if it hasn't been initialized
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Check if we're in a build environment without credentials
+const hasFirebaseConfig = firebaseConfig.projectId && firebaseConfig.apiKey;
+
+// Initialize Firebase only if it hasn't been initialized and we have config
+let app: FirebaseApp | undefined;
+let firestore: Firestore | undefined;
+let realtimeDb: Database | undefined;
+
+if (hasFirebaseConfig) {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  firestore = getFirestore(app);
+  realtimeDb = getDatabase(app);
+}
 
 // Export database instances
-export const firestore = getFirestore(app);
-export const realtimeDb = getDatabase(app);
-export { app };
+export { app, firestore, realtimeDb };

@@ -36,6 +36,10 @@ export class FirebaseQueueManager {
    * Join the queue
    */
   async joinQueue(sessionId: string): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
     try {
       const userRef = ref(realtimeDb, `queue/waitingUsers/${sessionId}`);
       await set(userRef, {
@@ -61,6 +65,10 @@ export class FirebaseQueueManager {
    * Leave the queue
    */
   async leaveQueue(sessionId: string): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
     try {
       const userRef = ref(realtimeDb, `queue/waitingUsers/${sessionId}`);
       await remove(userRef);
@@ -79,9 +87,14 @@ export class FirebaseQueueManager {
    * Update slider value (only if user is active)
    */
   async updateSliderValue(sessionId: string, value: number): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    const db = realtimeDb; // Capture for use in callback
     try {
       // Check if user is currently active
-      const activeUserRef = ref(realtimeDb, 'queue/activeUser');
+      const activeUserRef = ref(db, 'queue/activeUser');
       
       onValue(activeUserRef, async (snapshot) => {
         const activeUser = snapshot.val() as ActiveUser | null;
@@ -99,12 +112,40 @@ export class FirebaseQueueManager {
   }
 
   /**
+   * Store theme selection when user joins queue
+   */
+  async storeThemeSelection(sessionId: string, row1: string, row2: string, row3: string): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    try {
+      const themeRef = ref(realtimeDb, `queue/themes/${sessionId}`);
+      await set(themeRef, {
+        row1,
+        row2,
+        row3,
+        submittedAt: rtdbServerTimestamp(),
+      });
+      console.log(`Theme selection stored for ${sessionId}`);
+    } catch (error) {
+      console.error('Error storing theme selection:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Activate the next user in queue
    */
   async activateNextUser(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    const db = realtimeDb; // Capture for use in callback
     try {
       // Get the first user from waiting queue (oldest joinedAt)
-      const waitingUsersRef = ref(realtimeDb, 'queue/waitingUsers');
+      const waitingUsersRef = ref(db, 'queue/waitingUsers');
       
       onValue(waitingUsersRef, async (snapshot) => {
         const waitingUsers = snapshot.val() as { [sessionId: string]: QueueUser } | null;
@@ -121,15 +162,15 @@ export class FirebaseQueueManager {
 
         if (nextUser) {
           const now = Date.now();
-          const endTime = now + 30 * 1000; // 30 seconds from now
+          const endTime = now + 60 * 1000; // 60 seconds (1 minute) from now
 
           // Set as active user
-          const activeUserRef = ref(realtimeDb, 'queue/activeUser');
+          const activeUserRef = ref(db, 'queue/activeUser');
           await set(activeUserRef, {
             sessionId: nextUser.sessionId,
             startTime: now,
             endTime,
-            remainingTime: 30
+            remainingTime: 60
           });
 
           // Remove from waiting queue
@@ -139,10 +180,10 @@ export class FirebaseQueueManager {
           this.activeSessionData = [];
           this.startValueCollection();
 
-          // Set timer to deactivate after 30 seconds
+          // Set timer to deactivate after 60 seconds
           setTimeout(() => {
             this.deactivateCurrentUser();
-          }, 30000);
+          }, 60000);
 
           console.log(`User ${nextUser.sessionId} activated`);
         }
@@ -158,8 +199,13 @@ export class FirebaseQueueManager {
    * Deactivate current user and save their session
    */
   async deactivateCurrentUser(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    const db = realtimeDb; // Capture for use in callbacks
     try {
-      const activeUserRef = ref(realtimeDb, 'queue/activeUser');
+      const activeUserRef = ref(db, 'queue/activeUser');
       
       // Get current active user before removing
       onValue(activeUserRef, async (snapshot) => {
@@ -185,7 +231,7 @@ export class FirebaseQueueManager {
           console.log(`User ${activeUser.sessionId} deactivated`);
 
           // Check if queue is empty and reset slider if needed
-          const waitingUsersRef = ref(realtimeDb, 'queue/waitingUsers');
+          const waitingUsersRef = ref(db, 'queue/waitingUsers');
           onValue(waitingUsersRef, async (waitingSnapshot) => {
             const waitingUsers = waitingSnapshot.val();
             const queueEmpty = !waitingUsers || Object.keys(waitingUsers).length === 0;
@@ -236,8 +282,13 @@ export class FirebaseQueueManager {
    * Check if there's an active user, and if not, activate the next user
    */
   async checkAndActivateNext(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    const db = realtimeDb; // Capture for use in callback
     try {
-      const activeUserRef = ref(realtimeDb, 'queue/activeUser');
+      const activeUserRef = ref(db, 'queue/activeUser');
       
       onValue(activeUserRef, async (snapshot) => {
         const activeUser = snapshot.val() as ActiveUser | null;
@@ -258,20 +309,25 @@ export class FirebaseQueueManager {
    * Update queue length counter and reset slider value when queue is empty
    */
   private async updateQueueLength(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    const db = realtimeDb; // Capture for use in callbacks
     try {
-      const waitingUsersRef = ref(realtimeDb, 'queue/waitingUsers');
+      const waitingUsersRef = ref(db, 'queue/waitingUsers');
       
       onValue(waitingUsersRef, async (snapshot) => {
         const waitingUsers = snapshot.val();
         const count = waitingUsers ? Object.keys(waitingUsers).length : 0;
         
-        const queueLengthRef = ref(realtimeDb, 'queue/queueLength');
+        const queueLengthRef = ref(db, 'queue/queueLength');
         await set(queueLengthRef, count);
         
         // Reset slider value to 0 when queue becomes empty
         if (count === 0) {
           // Check if there's also no active user
-          const activeUserRef = ref(realtimeDb, 'queue/activeUser');
+          const activeUserRef = ref(db, 'queue/activeUser');
           onValue(activeUserRef, async (activeSnapshot) => {
             const activeUser = activeSnapshot.val();
             if (!activeUser) {
@@ -292,6 +348,10 @@ export class FirebaseQueueManager {
    * Listen to queue state changes
    */
   listenToQueueState(callback: (queueState: QueueState) => void): () => void {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return () => {};
+    }
     const queueRef = ref(realtimeDb, 'queue');
     
     onValue(queueRef, (snapshot) => {
@@ -323,6 +383,10 @@ export class FirebaseQueueManager {
    * Listen to slider value changes
    */
   listenToSliderValues(callback: (sliderData: SliderData | null) => void): () => void {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return () => {};
+    }
     const sliderRef = ref(realtimeDb, 'sliderValues/current');
     
     onValue(sliderRef, (snapshot) => {
@@ -360,8 +424,13 @@ export class FirebaseQueueManager {
    * Initialize queue system - activate first user if queue exists
    */
   async initializeQueue(): Promise<void> {
+    if (!realtimeDb) {
+      console.error('Firebase Realtime Database is not initialized');
+      return;
+    }
+    const db = realtimeDb; // Capture for use in callback
     try {
-      const activeUserRef = ref(realtimeDb, 'queue/activeUser');
+      const activeUserRef = ref(db, 'queue/activeUser');
       
       onValue(activeUserRef, async (snapshot) => {
         const activeUser = snapshot.val() as ActiveUser | null;

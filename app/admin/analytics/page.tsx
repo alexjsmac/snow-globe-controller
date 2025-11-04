@@ -68,6 +68,11 @@ export default function AdminAnalytics() {
   }, [loading, sessions, viewMode]);
 
   const fetchSessions = async () => {
+    if (!firestore) {
+      console.error('Firestore is not initialized');
+      setLoading(false);
+      return;
+    }
     try {
       const sessionsRef = collection(firestore, 'sessions');
       const q = query(sessionsRef, orderBy('startTime', 'asc'));
