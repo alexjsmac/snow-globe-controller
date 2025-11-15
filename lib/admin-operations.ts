@@ -17,7 +17,7 @@ export interface QueueStatistics {
   }>;
   queueLength: number;
   totalSessionsToday: number;
-  averageSliderValue: number;  // Average of all session average values
+  averageSliderValue: number; // Average of all session average values
   currentSliderValue: number | null;
 }
 
@@ -58,16 +58,16 @@ class AdminOperations {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayTimestamp = today.getTime();
-      
+
       const sessionsRef = collection(firestore, 'sessions');
       const sessionsSnapshot = await getDocs(sessionsRef);
-      
+
       let todaySessionCount = 0;
       let totalAverageValue = 0;
-      
+
       sessionsSnapshot.forEach((doc) => {
         const data = doc.data();
-        
+
         // Handle different timestamp formats
         let startTimeMs: number;
         if (data.startTime?.seconds) {
@@ -80,7 +80,7 @@ class AdminOperations {
           // Skip if we can't parse the timestamp
           return;
         }
-        
+
         // Check if session is from today
         if (startTimeMs >= todayTimestamp) {
           todaySessionCount++;
@@ -94,16 +94,23 @@ class AdminOperations {
       const averageSliderValue = todaySessionCount > 0 ? totalAverageValue / todaySessionCount : 0;
 
       // Format waiting users
-      const waitingUsers = queueData.waitingUsers 
-        ? Object.values(queueData.waitingUsers as Record<string, {
-            sessionId: string;
-            joinedAt: number;
-            position?: number;
-          }>).map((user) => ({
-            sessionId: user.sessionId,
-            joinedAt: user.joinedAt,
-            position: user.position || 0,
-          })).sort((a, b) => a.position - b.position)
+      const waitingUsers = queueData.waitingUsers
+        ? Object.values(
+            queueData.waitingUsers as Record<
+              string,
+              {
+                sessionId: string;
+                joinedAt: number;
+                position?: number;
+              }
+            >
+          )
+            .map((user) => ({
+              sessionId: user.sessionId,
+              joinedAt: user.joinedAt,
+              position: user.position || 0,
+            }))
+            .sort((a, b) => a.position - b.position)
         : [];
 
       // Calculate remaining time for active user
@@ -120,16 +127,15 @@ class AdminOperations {
       }
 
       // Ensure currentSliderValue is properly set
-      const currentSliderValue = sliderData && typeof sliderData.value === 'number' 
-        ? sliderData.value 
-        : null;
+      const currentSliderValue =
+        sliderData && typeof sliderData.value === 'number' ? sliderData.value : null;
 
       return {
         activeUser,
         waitingUsers,
         queueLength: queueData.queueLength || 0,
         totalSessionsToday: todaySessionCount,
-        averageSliderValue: averageSliderValue,  // Average of session averages
+        averageSliderValue: averageSliderValue, // Average of session averages
         currentSliderValue,
       };
     } catch (error) {
@@ -153,11 +159,11 @@ class AdminOperations {
       return () => {};
     }
     this.statsListener = callback;
-    
+
     // Set up real-time listeners
     const queueRef = ref(realtimeDb, 'queue');
     const sliderRef = ref(realtimeDb, 'sliderValues/current');
-    
+
     const updateStats = async () => {
       const stats = await this.getQueueStatistics();
       if (this.statsListener) {
@@ -168,7 +174,7 @@ class AdminOperations {
     // Listen to queue changes
     onValue(queueRef, updateStats);
     onValue(sliderRef, updateStats);
-    
+
     // Store unsubscribe functions
     const unsubQueue = () => {
       off(queueRef, 'value', updateStats);
@@ -176,7 +182,7 @@ class AdminOperations {
     const unsubSlider = () => {
       off(sliderRef, 'value', updateStats);
     };
-    
+
     this.unsubscribes.push(unsubQueue, unsubSlider);
 
     // Initial update
@@ -184,7 +190,7 @@ class AdminOperations {
 
     // Return unsubscribe function
     return () => {
-      this.unsubscribes.forEach(unsub => unsub());
+      this.unsubscribes.forEach((unsub) => unsub());
       this.unsubscribes = [];
       this.statsListener = null;
     };
@@ -195,7 +201,7 @@ class AdminOperations {
     if (!realtimeDb || !firestore) {
       return {
         success: false,
-        errors: ['Firebase is not initialized']
+        errors: ['Firebase is not initialized'],
       };
     }
     try {
@@ -216,9 +222,9 @@ class AdminOperations {
         // Clear Firestore sessions
         const sessionsRef = collection(firestore, 'sessions');
         const snapshot = await getDocs(sessionsRef);
-        const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
         promises.push(...deletePromises);
-        
+
         console.log(`Deleting ${snapshot.size} Firestore session(s)`);
 
         // Clear Realtime Database sessions
@@ -259,13 +265,13 @@ class AdminOperations {
 
       return {
         success: errors.length === 0,
-        errors
+        errors,
       };
     } catch (error) {
       console.error('Error resetting queue:', error);
       return {
         success: false,
-        errors: [`Reset failed: ${error}`]
+        errors: [`Reset failed: ${error}`],
       };
     }
   }
@@ -279,27 +285,27 @@ class AdminOperations {
     const sessionsRef = collection(firestore, 'sessions');
     const q = query(sessionsRef, orderBy('startTime', 'desc'), limit(limitCount));
     const snapshot = await getDocs(q);
-    
+
     const sessions: SessionSummary[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
-      
+
       // Convert Firestore timestamps to milliseconds
       let startTime: number;
       let endTime: number;
-      
+
       if (data.startTime?.seconds) {
         startTime = data.startTime.seconds * 1000;
       } else {
         startTime = data.startTime;
       }
-      
+
       if (data.endTime?.seconds) {
         endTime = data.endTime.seconds * 1000;
       } else {
         endTime = data.endTime;
       }
-      
+
       sessions.push({
         sessionId: data.sessionId || doc.id,
         startTime,
@@ -310,10 +316,10 @@ class AdminOperations {
         theme: data.theme,
         // Legacy fields for old slider sessions
         dataPoints: data.dataPoints,
-        statistics: data.statistics
+        statistics: data.statistics,
       });
     });
-    
+
     return sessions;
   }
 
@@ -332,24 +338,29 @@ class AdminOperations {
       if (queueData?.activeUser?.sessionId === sessionId) {
         // If active user, clear active user and activate next in queue
         await set(ref(realtimeDb, 'queue/activeUser'), null);
-        
+
         // The queue manager will automatically activate the next user
       } else if (queueData?.waitingUsers?.[sessionId]) {
         // Remove from waiting users
         await remove(ref(realtimeDb, `queue/waitingUsers/${sessionId}`));
-        
+
         // Update queue length
         const newLength = Math.max(0, (queueData.queueLength || 1) - 1);
         await set(ref(realtimeDb, 'queue/queueLength'), newLength);
-        
+
         // Reposition remaining users
-        const remainingUsers = Object.values(queueData.waitingUsers as Record<string, {
-            sessionId: string;
-            position: number;
-          }>)
+        const remainingUsers = Object.values(
+          queueData.waitingUsers as Record<
+            string,
+            {
+              sessionId: string;
+              position: number;
+            }
+          >
+        )
           .filter((u) => u.sessionId !== sessionId)
           .sort((a, b) => a.position - b.position);
-        
+
         for (let i = 0; i < remainingUsers.length; i++) {
           const user = remainingUsers[i];
           await set(ref(realtimeDb, `queue/waitingUsers/${user.sessionId}/position`), i + 1);

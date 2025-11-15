@@ -18,7 +18,43 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "coverage/**",
+      "*.config.js",
+      "*.config.mjs",
     ],
+  },
+  {
+    rules: {
+      // TypeScript specific rules
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/explicit-function-return-type": "off",
+
+      // React specific rules
+      "react-hooks/exhaustive-deps": "warn",
+      "react/prop-types": "off",
+      "react/react-in-jsx-scope": "off",
+
+      // General code quality
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "prefer-const": "error",
+      "no-var": "error",
+      "eqeqeq": ["error", "always"],
+      "no-duplicate-imports": "error",
+
+      // Best practices
+      "no-unused-expressions": "error",
+      "no-shadow": "off",
+      "@typescript-eslint/no-shadow": "error",
+      "prefer-template": "warn",
+      "no-nested-ternary": "warn",
+    },
   },
 ];
 

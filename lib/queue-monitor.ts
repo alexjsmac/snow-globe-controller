@@ -16,13 +16,13 @@ export class QueueMonitor {
    */
   startMonitoring(intervalMs: number = 1000): void {
     if (this.isMonitoring) return;
-    
+
     this.isMonitoring = true;
     console.log('🔍 Queue monitor started');
-    
+
     // Check immediately
     this.checkAndAdvanceQueue();
-    
+
     // Then check periodically
     this.monitorInterval = setInterval(() => {
       this.checkAndAdvanceQueue();
@@ -53,21 +53,21 @@ export class QueueMonitor {
       const activeUserRef = ref(realtimeDb, 'queue/activeUser');
       const snapshot = await get(activeUserRef);
       const activeUser = snapshot.val() as ActiveUser | null;
-      
+
       if (!activeUser) {
         // No active user, try to activate next in queue
         await this.activateNextUser();
         return;
       }
-      
+
       // Check if active user's time has expired
       const now = Date.now();
       if (activeUser.endTime && now >= activeUser.endTime) {
         console.log(`⏰ Active user ${activeUser.sessionId} time expired, advancing queue`);
-        
+
         // Remove the expired active user
         await remove(activeUserRef);
-        
+
         // Activate the next user
         await this.activateNextUser();
       }
@@ -89,50 +89,50 @@ export class QueueMonitor {
       const waitingUsersRef = ref(realtimeDb, 'queue/waitingUsers');
       const snapshot = await get(waitingUsersRef);
       const waitingUsers = snapshot.val() as { [sessionId: string]: QueueUser } | null;
-      
+
       if (!waitingUsers || Object.keys(waitingUsers).length === 0) {
         // No users waiting
         return;
       }
-      
+
       // Find user with earliest joinedAt timestamp (position 1)
-      const sortedUsers = Object.values(waitingUsers).sort((a, b) => 
-        (a.position || Number.MAX_VALUE) - (b.position || Number.MAX_VALUE)
+      const sortedUsers = Object.values(waitingUsers).sort(
+        (a, b) => (a.position || Number.MAX_VALUE) - (b.position || Number.MAX_VALUE)
       );
       const nextUser = sortedUsers[0];
-      
+
       if (nextUser) {
         const now = Date.now();
         const endTime = now + 30 * 1000; // 30 seconds from now
-        
+
         // Set as active user
         const activeUserRef = ref(realtimeDb, 'queue/activeUser');
         await set(activeUserRef, {
           sessionId: nextUser.sessionId,
           startTime: now,
           endTime,
-          remainingTime: 30
+          remainingTime: 30,
         });
-        
+
         // Remove from waiting queue
         const userWaitingRef = ref(realtimeDb, `queue/waitingUsers/${nextUser.sessionId}`);
         await remove(userWaitingRef);
-        
+
         // Update queue positions for remaining users
         const remainingUsers = Object.values(waitingUsers)
-          .filter(u => u.sessionId !== nextUser.sessionId)
+          .filter((u) => u.sessionId !== nextUser.sessionId)
           .sort((a, b) => (a.position || 0) - (b.position || 0));
-        
+
         for (let i = 0; i < remainingUsers.length; i++) {
           const user = remainingUsers[i];
           const userRef = ref(realtimeDb, `queue/waitingUsers/${user.sessionId}/position`);
           await set(userRef, i + 1);
         }
-        
+
         // Update queue length
         const queueLengthRef = ref(realtimeDb, 'queue/queueLength');
         await set(queueLengthRef, remainingUsers.length);
-        
+
         console.log(`✅ Activated user ${nextUser.sessionId} from queue monitor`);
       }
     } catch (error) {

@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { QueueMonitorProvider } from "@/components/QueueMonitorProvider";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { QueueMonitorProvider } from '@/components/QueueMonitorProvider';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Christmas Magic Installation",
-  description: "Interactive Christmas-themed installation - Pick your theme and join the queue!",
+  title: 'Christmas Magic Installation',
+  description: 'Interactive Christmas-themed installation - Pick your theme and join the queue!',
 };
 
 export default function RootLayout({
@@ -15,9 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <QueueMonitorProvider>
-          {children}
-        </QueueMonitorProvider>
+        <QueueMonitorProvider>{children}</QueueMonitorProvider>
       </body>
     </html>
   );

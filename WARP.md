@@ -11,12 +11,14 @@ Snow Globe Controller is a Next.js web application that provides a real-time, qu
 ### Core Components
 
 **Static Next.js App with Firebase Backend**
+
 - Next.js 15.x frontend with React 19 and TypeScript
 - Firebase Realtime Database for real-time state (queue, active users, current values)
 - Firebase Firestore for session history and data persistence
 - No server-side components - everything runs client-side
 
 **Queue Management System**
+
 - Main queue logic in `lib/queue-manager.ts` handles:
   - User queue ordering and position tracking
   - 60-second timer activation for active users
@@ -25,11 +27,13 @@ Snow Globe Controller is a Next.js web application that provides a real-time, qu
   - Session data persistence to Firebase Firestore
 
 **Theme Selection System**
+
 - Replaced original slider with theme selection interface
 - Three customizable rows (Color, Pattern, Effect) for Christmas-themed installation
 - Each theme selection transmits to TouchDesigner via Firebase
 
 **Data Flow**
+
 1. Client generates unique session ID and connects to Firebase
 2. User selects theme options and joins queue via Firebase Realtime Database
 3. When activated → 60-second timer starts, theme is displayed
@@ -88,6 +92,7 @@ npm run analyze-trends
 ```
 
 ### Firebase Database Management
+
 ```bash
 # No local database - all data is stored in Firebase
 # View data via Firebase Console:
@@ -98,11 +103,13 @@ npm run analyze-trends
 ## Environment Configuration
 
 Create `.env.local` from `.env.example`:
+
 ```bash
 cp .env.example .env.local
 ```
 
 Required Firebase configuration:
+
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
 - `NEXT_PUBLIC_FIREBASE_DATABASE_URL` (for Realtime Database)
@@ -112,6 +119,7 @@ Required Firebase configuration:
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 For admin dashboard access:
+
 - `NEXT_PUBLIC_ADMIN_PASSWORD_HASH`
 
 ## Firebase Database Structure
@@ -119,15 +127,18 @@ For admin dashboard access:
 ### Realtime Database Paths
 
 **Queue Management** (`/queue`):
+
 - `activeUser`: { sessionId, startTime, endTime, remainingTime }
 - `waitingUsers`: { [sessionId]: { sessionId, joinedAt, position } }
 - `queueLength`: number
 - `themes`: { [sessionId]: { row1, row2, row3, submittedAt } }
 
 **Theme Values** (`/themeValues`):
+
 - `current`: { row1, row2, row3, sessionId, timestamp }
 
 **Slider Values** (Legacy) (`/sliderValues`):
+
 - `current`: { value, normalizedValue, sessionId, timestamp }
 
 ### Firestore Collections
@@ -150,11 +161,13 @@ The system sends data to Firebase in two ways:
    - Requires authentication for access
 
 Generate authentication token for TouchDesigner:
+
 ```bash
 npm run touchdesigner:token
 ```
 
 This creates a `touchdesigner-config.json` file with:
+
 - OAuth2 access token for protected Firestore endpoints
 - All Firebase endpoint URLs for TouchDesigner
 - Token expires after ~1 hour, regenerate as needed
@@ -164,6 +177,7 @@ For detailed integration steps, see `docs/TOUCHDESIGNER.md`.
 ## Key Features
 
 ### Admin Dashboard
+
 - Located at `/admin` route
 - Password protection via environment variable
 - Real-time queue monitoring
@@ -172,12 +186,14 @@ For detailed integration steps, see `docs/TOUCHDESIGNER.md`.
 - Configure password via `NEXT_PUBLIC_ADMIN_PASSWORD_HASH`
 
 ### Christmas Theme Selection
+
 - Three customizable rows (colors, patterns, effects)
 - User interface located in `components/ThemeSelector.tsx`
 - Theme options defined in `lib/theme-options.ts`
 - Current implementation uses 60-second turns (vs. 30-second in slider mode)
 
 ### Real-time Queue Management
+
 - Queue position updates in real-time
 - Firebase listeners handle state changes
 - Automatic progression to next queued user
@@ -186,20 +202,25 @@ For detailed integration steps, see `docs/TOUCHDESIGNER.md`.
 ## Common Development Tasks
 
 ### Modifying Queue Duration
+
 Change the timer duration in `lib/queue-manager.ts`:
-- Around line ~165: Update `endTime` calculation (60 * 1000 = 60 seconds)
+
+- Around line ~165: Update `endTime` calculation (60 \* 1000 = 60 seconds)
 - Around line ~184: Update `setTimeout` duration (60000 = 60 seconds)
 - Update progress bar calculation in page.tsx (divide by 60)
 - Update duration field in Firestore session summary
 
 ### Customizing Theme Options
+
 Edit theme options in `lib/theme-options.ts`:
+
 - `colorOptions`: First row selection options
 - `patternOptions`: Second row selection options
 - `effectOptions`: Third row selection options
 - Each option needs `id`, `name`, and `symbol` properties
 
 ### Debugging Connection Issues
+
 1. Check Firebase connection in browser DevTools Console
 2. Verify Firebase configuration in `.env.local`
 3. Ensure Firebase Realtime Database and Firestore are enabled
@@ -207,7 +228,9 @@ Edit theme options in `lib/theme-options.ts`:
 5. Enable debug logging in localStorage: `localStorage.debug = 'slider-queue:*'`
 
 ### Testing Queue Behavior
+
 Open multiple browser tabs/windows to simulate multiple users:
+
 - Each tab gets unique session ID (stored in localStorage)
 - Can test queue ordering, position updates, activation cycling
 - Monitor browser console for Firebase connection logs
@@ -218,6 +241,7 @@ Open multiple browser tabs/windows to simulate multiple users:
 For full deployment steps, see `docs/DEPLOYMENT.md`.
 
 Quick deployment steps:
+
 1. Set up Firebase project with Realtime Database and Firestore
 2. Configure environment variables with Firebase credentials
 3. Build and export static site: `npm run build && npm run export`
@@ -234,14 +258,17 @@ Quick deployment steps:
 ### Firebase Realtime Database Structure
 
 **Queue Management** (`/queue`):
+
 - `activeUser`: { sessionId, startTime, endTime, remainingTime }
 - `waitingUsers`: { [sessionId]: { sessionId, joinedAt, position } }
 - `queueLength`: number
 
 **Slider Values** (`/sliderValues`):
+
 - `current`: { value, normalizedValue, sessionId, timestamp }
 
 **React Hook Events** (`useFirebaseQueue`):
+
 - Real-time listeners automatically update queue position, active status, and remaining time
 - No manual event handling needed - Firebase listeners manage all state updates
 
@@ -255,13 +282,16 @@ Quick deployment steps:
 ### Data Persistence
 
 **Firebase Firestore Collections:**
+
 - `sessions`: session summaries with statistics only
 
 **Firebase Realtime Database:**
+
 - `queue`: Live queue state and user management
 - `sliderValues/current`: Real-time slider values for TouchDesigner
 
 **Value Sampling:**
+
 - Client collects slider values at 100ms intervals during active sessions
 - Client throttles slider transmission at 100ms to prevent flooding
 - Session summaries saved to Firestore with statistics only (no raw data)
@@ -269,24 +299,30 @@ Quick deployment steps:
 ## Common Development Tasks
 
 ### Adding New Firebase Operations
+
 1. Add method to `FirebaseQueueManager` class in `lib/firebase-queue.ts`
 2. Add corresponding hook method in `hooks/useFirebaseQueue.ts`
 3. Update TypeScript interfaces in `lib/types.ts`
 
 ### Modifying Queue Duration
+
 Change the timer duration in `lib/firebase-queue.ts`:
-- Line 135: Update `endTime` calculation (30 * 1000 = 30 seconds)
+
+- Line 135: Update `endTime` calculation (30 \* 1000 = 30 seconds)
 - Line 154: Update `setTimeout` duration (30000 = 30 seconds)
 - Update duration field in Firestore session summary
 
 ### Debugging Connection Issues
+
 1. Check Firebase connection in browser DevTools Console
 2. Verify Firebase configuration in `.env.local`
 3. Ensure Firebase Realtime Database and Firestore are enabled in Firebase Console
 4. Check Firebase security rules allow read/write access
 
 ### Testing Queue Behavior
+
 Open multiple browser tabs/windows to simulate multiple users:
+
 - Each tab gets unique session ID (stored in localStorage)
 - Can test queue ordering, position updates, activation cycling
 - Monitor browser console for Firebase connection logs

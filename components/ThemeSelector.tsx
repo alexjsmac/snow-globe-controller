@@ -11,12 +11,18 @@ interface ThemeSelectorRowProps {
   disabled?: boolean;
 }
 
-function ThemeSelectorRow({ label, options, selectedId, onSelect, disabled = false }: ThemeSelectorRowProps) {
+function ThemeSelectorRow({
+  label,
+  options,
+  selectedId,
+  onSelect,
+  disabled = false,
+}: ThemeSelectorRowProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const currentIndex = options.findIndex(opt => opt.id === selectedId);
-  
+  const currentIndex = options.findIndex((opt) => opt.id === selectedId);
+
   const minSwipeDistance = 50;
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -30,7 +36,7 @@ function ThemeSelectorRow({ label, options, selectedId, onSelect, disabled = fal
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd || disabled) return;
-    
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -56,7 +62,7 @@ function ThemeSelectorRow({ label, options, selectedId, onSelect, disabled = fal
       <h3 className="text-center text-lg font-bold text-red-100 mb-3 uppercase tracking-wider">
         {label}
       </h3>
-      <div 
+      <div
         className={`relative bg-red-950/50 border-2 border-red-500/50 rounded-lg p-6 ${
           disabled ? 'opacity-50' : ''
         }`}
@@ -97,16 +103,20 @@ function ThemeSelectorRow({ label, options, selectedId, onSelect, disabled = fal
                 `}
                 style={{ minWidth: '80px' }}
               >
-                <div className={`
+                <div
+                  className={`
                   text-6xl mb-2 transition-all
                   ${isSelected ? 'filter drop-shadow-lg' : ''}
-                `}>
+                `}
+                >
                   {option.symbol}
                 </div>
-                <div className={`
+                <div
+                  className={`
                   text-sm font-mono uppercase tracking-wider
                   ${isSelected ? 'text-green-300 font-bold' : 'text-red-200'}
-                `}>
+                `}
+                >
                   {option.name}
                 </div>
               </button>

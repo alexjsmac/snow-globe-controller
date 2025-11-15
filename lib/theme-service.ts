@@ -22,7 +22,7 @@ export async function updateThemeSelection(
       row2,
       row3,
       sessionId,
-      timestamp: rtdbServerTimestamp()
+      timestamp: rtdbServerTimestamp(),
     });
   } catch (error) {
     console.error('Error updating theme selection:', error);
@@ -42,11 +42,11 @@ export async function resetThemeSelection(): Promise<void> {
   try {
     const themeRef = ref(realtimeDb, 'themeValues/current');
     await set(themeRef, {
-      row1: "none",
-      row2: "none",
-      row3: "none",
-      sessionId: "none",
-      timestamp: rtdbServerTimestamp()
+      row1: 'none',
+      row2: 'none',
+      row3: 'none',
+      sessionId: 'none',
+      timestamp: rtdbServerTimestamp(),
     });
   } catch (error) {
     console.error('Error resetting theme selection:', error);

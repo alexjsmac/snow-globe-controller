@@ -17,7 +17,7 @@ export interface ActiveUser {
 }
 
 export interface QueueState {
-  activeUser: ActiveUser | "none" | null;
+  activeUser: ActiveUser | 'none' | null;
   waitingUsers: { [sessionId: string]: QueueUser };
   queueLength: number;
 }

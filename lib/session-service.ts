@@ -23,10 +23,10 @@ export async function saveThemeSession(sessionData: ThemeSessionData): Promise<v
     console.error('Firestore is not initialized');
     return;
   }
-  
+
   try {
     const sessionsCollection = collection(firestore, 'sessions');
-    
+
     await addDoc(sessionsCollection, {
       sessionId: sessionData.sessionId,
       startTime: sessionData.startTime,
@@ -35,7 +35,7 @@ export async function saveThemeSession(sessionData: ThemeSessionData): Promise<v
       queueJoinTime: sessionData.queueJoinTime,
       queueWaitTime: sessionData.queueWaitTime,
       theme: sessionData.theme,
-      createdAt: sessionData.endTime // For sorting/querying
+      createdAt: sessionData.endTime, // For sorting/querying
     });
 
     console.log(`Session ${sessionData.sessionId} saved to Firestore`);

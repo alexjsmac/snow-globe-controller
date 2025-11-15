@@ -22,7 +22,7 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
   const [queuePosition, setQueuePosition] = useState(-1);
   const [queueLength, setQueueLength] = useState(0);
   const [remainingTime, setRemainingTime] = useState(0);
-  
+
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const queueUnsubscribe = useRef<(() => void) | null>(null);
 
@@ -30,13 +30,13 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
   useEffect(() => {
     // Check for existing session in localStorage
     let storedSessionId = localStorage.getItem('christmasThemeSessionId');
-    
+
     if (!storedSessionId) {
       // Generate new session ID using the queue manager
       storedSessionId = firebaseQueueManager.generateSessionId();
       localStorage.setItem('christmasThemeSessionId', storedSessionId);
     }
-    
+
     setSessionId(storedSessionId);
     setIsConnected(true); // Firebase is always connected
   }, []);
@@ -115,7 +115,7 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
   // Queue operations
   const joinQueue = useCallback(async () => {
     if (!sessionId) return;
-    
+
     try {
       await firebaseQueueManager.joinQueue(sessionId);
       console.log('Joined queue successfully');
@@ -130,20 +130,23 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
   }, [joinQueue]);
 
   // Submit theme selection and join queue
-  const submitTheme = useCallback(async (row1: string, row2: string, row3: string) => {
-    if (!sessionId) return;
-    
-    try {
-      // Store theme selection
-      await firebaseQueueManager.storeThemeSelection(sessionId, row1, row2, row3);
-      // Join queue
-      await firebaseQueueManager.joinQueue(sessionId);
-      console.log('Theme submitted and joined queue successfully');
-    } catch (error) {
-      console.error('Error submitting theme:', error);
-      throw error;
-    }
-  }, [sessionId]);
+  const submitTheme = useCallback(
+    async (row1: string, row2: string, row3: string) => {
+      if (!sessionId) return;
+
+      try {
+        // Store theme selection
+        await firebaseQueueManager.storeThemeSelection(sessionId, row1, row2, row3);
+        // Join queue
+        await firebaseQueueManager.joinQueue(sessionId);
+        console.log('Theme submitted and joined queue successfully');
+      } catch (error) {
+        console.error('Error submitting theme:', error);
+        throw error;
+      }
+    },
+    [sessionId]
+  );
 
   return {
     isConnected,
@@ -154,7 +157,7 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     remainingTime,
     joinQueue,
     rejoinQueue,
-    submitTheme
+    submitTheme,
   };
 }
 
