@@ -13,7 +13,9 @@ interface AdminAuthState {
 const ADMIN_PASSWORD_HASH = process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH;
 
 if (!ADMIN_PASSWORD_HASH) {
-  console.warn('Admin password not configured. Please set NEXT_PUBLIC_ADMIN_PASSWORD_HASH in your .env.local file');
+  console.warn(
+    'Admin password not configured. Please set NEXT_PUBLIC_ADMIN_PASSWORD_HASH in your .env.local file'
+  );
 }
 
 export function useAdminAuth(): AdminAuthState {
@@ -36,7 +38,7 @@ export function useAdminAuth(): AdminAuthState {
       console.error('Admin password not configured');
       return false;
     }
-    
+
     if (password === ADMIN_PASSWORD_HASH) {
       localStorage.setItem('admin_auth', btoa(ADMIN_PASSWORD_HASH));
       setIsAuthenticated(true);

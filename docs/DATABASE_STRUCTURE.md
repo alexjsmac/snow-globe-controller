@@ -1,12 +1,13 @@
 # Firebase Database Architecture
 
-The TouchDesigner Slider Queue uses a **dual-database approach** with Firebase:
-- **Realtime Database**: Live queue state and current slider values
-- **Firestore**: Session summaries and historical data for TouchDesigner
+The Snow Globe Controller uses a **dual-database approach** with Firebase:
+
+- **Realtime Database**: Live queue state and current theme values
+- **Firestore**: Session summaries and historical data
 
 ## Firebase Realtime Database Schema
 
-> Used for real-time queue management and current slider values
+> Used for real-time queue management and current theme display
 
 ```json
 {
@@ -15,60 +16,98 @@ The TouchDesigner Slider Queue uses a **dual-database approach** with Firebase:
       "sessionId": "uuid-string",
       "startTime": 1234567890000,
       "endTime": 1234567890000,
-      "remainingTime": 25
+      "remainingTime": 60
     },
     "waitingUsers": {
-      "user1": {
-        "sessionId": "uuid-string",
+      "user-uuid-1": {
+        "sessionId": "user-uuid-1",
         "joinedAt": 1234567890000,
         "position": 1
       },
-      "user2": {
-        "sessionId": "uuid-string", 
+      "user-uuid-2": {
+        "sessionId": "user-uuid-2",
         "joinedAt": 1234567890000,
         "position": 2
       }
     },
+    "themes": {
+      "user-uuid-1": {
+        "row1": "red",
+        "row2": "snowflakes",
+        "row3": "sparkle",
+        "submittedAt": 1234567890000
+      },
+      "user-uuid-2": {
+        "row1": "green",
+        "row2": "stars",
+        "row3": "pulse",
+        "submittedAt": 1234567890000
+      }
+    },
     "queueLength": 2
   },
-  "sliderValues": {
+  "themeValues": {
     "current": {
-      "value": -0.5,
-      "normalizedValue": 0.25,
+      "row1": "red",
+      "row2": "snowflakes",
+      "row3": "sparkle",
       "sessionId": "uuid-string",
-      "timestamp": 1234567890000
+      "timestamp": 1234567890000,
+      "active": true
     }
-  },
-  "systemState": {
-    "lastUpdated": 1234567890000,
-    "serverTime": 1234567890000,
-    "totalSessions": 10,
-    "activeConnections": 3
   }
 }
 ```
+
+### Theme Options
+
+**Row 1 - Colors:**
+- `red` - Classic Christmas red (🔴)
+- `green` - Traditional Christmas green (🟢)
+- `gold` - Elegant golden accents (🟡)
+
+**Row 2 - Patterns:**
+- `snowflakes` - Delicate winter snowflakes (❄️)
+- `stars` - Twinkling holiday stars (⭐)
+- `lights` - Festive Christmas lights (💡)
+
+**Row 3 - Effects:**
+- `sparkle` - Gentle sparkling animation (✨)
+- `pulse` - Rhythmic pulsing effect (💫)
+- `wave` - Flowing wave motion (🌊)
 
 ## Firebase Firestore Collections
 
-> Used for session summaries and TouchDesigner data consumption
+> Used for session summaries and historical analytics
 
 ### `sessions` Collection
+
 ```json
 {
   "sessionId": "uuid-string",
-  "startTime": "2024-08-31T10:00:00.000Z",
-  "endTime": "2024-08-31T10:00:30.000Z", 
-  "duration": 30,
-  "dataPoints": 300,
-  "statistics": {
-    "average": 0.1,
-    "min": -0.8,
-    "max": 0.9,
-    "standardDeviation": 0.45
-  }
+  "startTime": 1234567890000,
+  "endTime": 1234567920000,
+  "duration": 60,
+  "queueJoinTime": 1234567850000,
+  "queueWaitTime": 40,
+  "theme": {
+    "row1": "red",
+    "row2": "snowflakes",
+    "row3": "sparkle"
+  },
+  "createdAt": 1234567920000
 }
 ```
 
+**Fields:**
+- `sessionId`: Unique identifier for the session
+- `startTime`: When the theme became active (Unix timestamp)
+- `endTime`: When the session ended (Unix timestamp)
+- `duration`: Length of session in seconds (default: 60 seconds)
+- `queueJoinTime`: When user joined the queue
+- `queueWaitTime`: Time spent waiting in queue (seconds)
+- `theme`: The selected theme combination
+- `createdAt`: Firestore document creation timestamp
 
 ## Realtime Database Rules
 
@@ -76,25 +115,26 @@ The TouchDesigner Slider Queue uses a **dual-database approach** with Firebase:
 {
   "rules": {
     ".read": true,
+    ".write": true,
     "queue": {
-      ".write": true,
       "activeUser": {
         ".validate": "newData.hasChildren(['sessionId', 'startTime', 'endTime'])"
       },
       "waitingUsers": {
         "$userId": {
-          ".validate": "newData.hasChildren(['sessionId', 'joinedAt', 'position'])"
+          ".validate": "newData.hasChildren(['sessionId', 'joinedAt'])"
+        }
+      },
+      "themes": {
+        "$userId": {
+          ".validate": "newData.hasChildren(['row1', 'row2', 'row3', 'submittedAt'])"
         }
       }
     },
-    "sliderValues": {
-      ".write": true,
+    "themeValues": {
       "current": {
-        ".validate": "newData.hasChildren(['value', 'normalizedValue', 'sessionId', 'timestamp']) && newData.child('value').val() >= -1 && newData.child('value').val() <= 1"
+        ".validate": "newData.hasChildren(['row1', 'row2', 'row3', 'sessionId', 'timestamp'])"
       }
-    },
-    "systemState": {
-      ".write": true
     }
   }
 }
@@ -106,69 +146,39 @@ The TouchDesigner Slider Queue uses a **dual-database approach** with Firebase:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read access
-    match /{document=**} {
-      allow read: if true;
-    }
-    
-    // Session summaries - write from web app, read requires authentication
-    match /sessions/{sessionId} {
-      allow write: if true; // Web app can write session summaries
-      allow read: if request.auth != null; // Only authenticated users can read
-    }
-    
-    // System state - requires authentication
-    match /system/{document} {
-      allow read, write: if request.auth != null;
+    // Allow read/write to sessions collection
+    match /sessions/{document=**} {
+      allow read, write: if true;
     }
   }
 }
 ```
 
-## Key Design Decisions
+## Data Flow
 
-### Dual Database Strategy
-1. **Realtime Database**: Handles live queue state and current slider values
-   - Optimized for real-time updates (sub-100ms)
-   - Minimal data structure for performance
-   - Direct TouchDesigner REST API access
+1. **User Selection**: User selects theme options (color, pattern, effect)
+2. **Join Queue**: Theme is stored in `queue/themes/{sessionId}` and user added to `queue/waitingUsers`
+3. **Activation**: When user's turn comes, their theme is copied to `themeValues/current` and they become `activeUser`
+4. **Display**: TouchDesigner reads from `themeValues/current` to display the active theme
+5. **Completion**: After 60 seconds, session is saved to Firestore `sessions` collection
+6. **Next User**: Next waiting user is automatically activated
 
-2. **Firestore**: Handles session summaries only
-   - Better for complex queries and analytics
-   - Document-based structure for historical data
-   - Statistics-only approach to control costs
+## Queue Management
 
-### Architecture Benefits
-1. **Queue Management**: Separate `activeUser` and `waitingUsers` for clear state management
-2. **Real-time Performance**: Current slider value updated in real-time
-3. **Data Persistence**: Session summaries stored permanently in Firestore
-4. **Cost Optimization**: Statistics-only approach reduces Firestore writes
-5. **TouchDesigner Integration**: Multiple endpoints for different use cases
+### Position Calculation
+Users in `waitingUsers` are sorted by `joinedAt` timestamp to determine queue position:
+- Position 1 = oldest `joinedAt` (next to be activated)
+- Position 2 = second oldest
+- etc.
 
-## TouchDesigner Integration Endpoints
+### Session Duration
+- Default active session: **60 seconds**
+- Countdown timer updates in real-time
+- Automatic progression to next user
 
-### Real-time Data (Realtime Database)
-```
-# Current slider value (recommended for live visuals)
-GET https://PROJECT-ID-default-rtdb.firebaseio.com/sliderValues/current.json
-
-# Queue state (for queue visualization)
-GET https://PROJECT-ID-default-rtdb.firebaseio.com/queue.json
-```
-
-### Historical Data (Firestore)
-```
-# Session summaries (for analytics) - requires authentication
-GET https://firestore.googleapis.com/v1/projects/PROJECT-ID/databases/(default)/documents/sessions
-```
-
-## Advantages Over Socket.IO Architecture
-
-- **No Custom Server**: Pure client-side static application
-- **Automatic Scaling**: Firebase handles all infrastructure
-- **Built-in Persistence**: Data survives across sessions
-- **Global Synchronization**: All clients sync automatically
-- **Offline Resilience**: Works with intermittent connections
-- **Direct API Access**: TouchDesigner connects directly to Firebase
-- **Cost Effective**: Pay only for actual usage
-- **Multiple Data Sources**: Realtime DB for live data, Firestore for analytics
+### Admin Operations
+Admins can:
+- Skip current active user
+- Remove waiting users
+- Clear entire queue
+- Reset system state

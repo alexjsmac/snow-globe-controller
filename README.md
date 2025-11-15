@@ -12,6 +12,7 @@ A real-time, queue-based interactive control system for TouchDesigner installati
 ![Christmas Magic Installation](https://github.com/user-attachments/assets/3d21e848-a614-4d9c-9514-d926c498557e)
 
 This interactive Christmas installation allows users to:
+
 - **Select a theme** from 3 customizable categories (Color, Pattern, Effect)
 - **Join a queue** and wait for their turn
 - **See their theme displayed** for 60 seconds when activated
@@ -21,16 +22,19 @@ This interactive Christmas installation allows users to:
 ### 🎨 Theme Categories
 
 **🎨 Color Options:**
+
 - 🔴 **Red** - Classic Christmas red
-- 🟢 **Green** - Traditional Christmas green  
+- 🟢 **Green** - Traditional Christmas green
 - 🟡 **Gold** - Elegant golden accents
 
 **✨ Pattern Options:**
+
 - ❄️ **Snowflakes** - Delicate winter snowflakes
 - ⭐ **Stars** - Twinkling holiday stars
 - 💡 **Lights** - Festive Christmas lights
 
 **🎭 Effect Options:**
+
 - ✨ **Sparkle** - Gentle sparkling animation
 - 💫 **Pulse** - Rhythmic pulsing effect
 - 🌊 **Wave** - Flowing wave motion
@@ -40,6 +44,7 @@ Perfect for holiday displays, museum installations, retail environments, or any 
 ## 🏗️ Architecture
 
 ### Tech Stack
+
 - **Frontend**: Next.js 15.5, React 19, TailwindCSS
 - **Backend**: Firebase Realtime Database + Firestore
 - **Database**: Firebase Firestore (session summaries) + Realtime Database (live queue state)
@@ -47,6 +52,7 @@ Perfect for holiday displays, museum installations, retail environments, or any 
 - **Language**: TypeScript
 
 ### Data Flow
+
 ```
 User → Web Interface → Firebase Realtime DB → Queue Management
                     ↓                              ↓
@@ -58,6 +64,7 @@ User → Web Interface → Firebase Realtime DB → Queue Management
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 22.0.0 or higher (as specified in project rules)
 - npm or yarn
 - Firebase account with Firestore and Realtime Database enabled
@@ -66,22 +73,26 @@ User → Web Interface → Firebase Realtime DB → Queue Management
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/alexjsmac/snow-globe-controller.git
    cd snow-globe-controller
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Configure environment variables**
+
    ```bash
    cp .env.example .env.local
    ```
-   
+
    Edit `.env.local` and add your Firebase configuration:
+
    ```env
    NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
@@ -93,6 +104,7 @@ User → Web Interface → Firebase Realtime DB → Queue Management
    ```
 
 4. **Run the development server**
+
    ```bash
    npm run dev
    ```
@@ -103,12 +115,14 @@ User → Web Interface → Firebase Realtime DB → Queue Management
 ## 🔥 Firebase Setup
 
 ### Step 1: Create Firebase Project
+
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Create a new project
 3. Enable Firestore Database
 4. Enable Realtime Database
 
 ### Step 2: Get Configuration
+
 1. Go to Project Settings → General
 2. Scroll to "Your apps" and add a Web app
 3. Copy the configuration object
@@ -117,6 +131,7 @@ User → Web Interface → Firebase Realtime DB → Queue Management
 ### Step 3: Set Database Rules
 
 **Firestore Rules** (copy to Firebase Console):
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
@@ -126,12 +141,12 @@ service cloud.firestore {
       allow write: if true; // Web app can write session summaries
       allow read: if request.auth != null; // Only authenticated users can read
     }
-    
+
     // System state - requires authentication
     match /system/{document} {
       allow read, write: if request.auth != null;
     }
-    
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
@@ -141,6 +156,7 @@ service cloud.firestore {
 ```
 
 **Realtime Database Rules** (copy to Firebase Console):
+
 ```json
 {
   "rules": {
@@ -155,16 +171,17 @@ service cloud.firestore {
 ### Firebase Data Sources
 
 **Christmas Theme Data** - Current theme selection:
-   ```json
-   // /themeValues/current
-   {
-     "row1": "green",         // Selected color: red, green, gold
-     "row2": "snowflakes",    // Selected pattern: snowflakes, stars, lights
-     "row3": "wave",          // Selected effect: sparkle, pulse, wave
-     "sessionId": "uuid",     // Unique session identifier
-     "timestamp": 1234567890  // Unix timestamp
-   }
-   ```
+
+```json
+// /themeValues/current
+{
+  "row1": "green", // Selected color: red, green, gold
+  "row2": "snowflakes", // Selected pattern: snowflakes, stars, lights
+  "row3": "wave", // Selected effect: sparkle, pulse, wave
+  "sessionId": "uuid", // Unique session identifier
+  "timestamp": 1234567890 // Unix timestamp
+}
+```
 
 2. **Firestore Collection** - Historical data
    - **`sessions`** - Session summaries with statistics
@@ -173,8 +190,8 @@ service cloud.firestore {
      "sessionId": "uuid",
      "startTime": "2024-08-31T10:00:00.000Z",
      "endTime": "2024-08-31T10:00:30.000Z",
-     "duration": 30,          // Seconds
-     "dataPoints": 300,       // Total samples
+     "duration": 30, // Seconds
+     "dataPoints": 300, // Total samples
      "statistics": {
        "min": -0.8,
        "max": 0.9,
@@ -187,6 +204,7 @@ service cloud.firestore {
 ### TouchDesigner Setup
 
 **Realtime Theme Data:**
+
 ```python
 # In TouchDesigner, use Web Client DAT
 # URL: https://s3nsora-dev-default-rtdb.firebaseio.com/themeValues/current.json
@@ -196,6 +214,7 @@ service cloud.firestore {
 ```
 
 2. **Firestore Session History** (requires authentication):
+
    ```python
    # For session summaries:
    # URL: https://firestore.googleapis.com/v1/projects/YOUR_PROJECT/databases/(default)/documents/sessions
@@ -244,7 +263,7 @@ snow-globe-controller/
 │   │   └── page.tsx         # Main admin interface
 │   ├── layout.tsx           # Root layout
 │   └── page.tsx             # Main Christmas theme interface
-├── components/              
+├── components/
 │   ├── ThemeSelector.tsx    # Christmas theme selection UI
 │   ├── Footer.tsx           # Footer component
 │   └── QueueMonitorProvider.tsx # Queue monitoring context
@@ -283,30 +302,32 @@ snow-globe-controller/
 ### Modifying Queue Duration
 
 To change the turn duration (currently 60 seconds for Christmas themes), update in `lib/queue-manager.ts`:
-- Search for timer duration constants (60 * 1000 = 60 seconds)
+
+- Search for timer duration constants (60 \* 1000 = 60 seconds)
 - Update progress bar calculations in `app/page.tsx` (divide by new duration)
 - Ensure consistency across all time-related UI components
 
 ### Customizing Theme Options
 
 To modify available Christmas theme options, edit `lib/theme-options.ts`:
+
 - `colorOptions`: Available color selections (Red, Green, Gold)
-- `patternOptions`: Available pattern selections (Snowflakes, Stars, Lights)  
+- `patternOptions`: Available pattern selections (Snowflakes, Stars, Lights)
 - `effectOptions`: Available effect selections (Sparkle, Pulse, Wave)
 - Each option requires `id`, `symbol`, and `name` properties
 
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | Yes |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | Yes |
-| `NEXT_PUBLIC_FIREBASE_DATABASE_URL` | Firebase Realtime Database URL | Yes |
-|| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID (use 's3nsora-dev' for development) | Yes |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | Yes |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID | Yes |
-|| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | Yes |
-|| `NEXT_PUBLIC_ADMIN_PASSWORD_HASH` | Hashed password for admin dashboard access | Optional |
+| Variable                                   | Description                       | Required                                                |
+| ------------------------------------------ | --------------------------------- | ------------------------------------------------------- | -------- |
+| `NEXT_PUBLIC_FIREBASE_API_KEY`             | Firebase API key                  | Yes                                                     |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`         | Firebase auth domain              | Yes                                                     |
+| `NEXT_PUBLIC_FIREBASE_DATABASE_URL`        | Firebase Realtime Database URL    | Yes                                                     |
+|                                            | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID (use 's3nsora-dev' for development) | Yes      |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`      | Firebase storage bucket           | Yes                                                     |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID                | Yes                                                     |
+|                                            | `NEXT_PUBLIC_FIREBASE_APP_ID`     | Firebase app ID                                         | Yes      |
+|                                            | `NEXT_PUBLIC_ADMIN_PASSWORD_HASH` | Hashed password for admin dashboard access              | Optional |
 
 ## 🐛 Troubleshooting
 
@@ -337,6 +358,7 @@ To modify available Christmas theme options, edit `lib/theme-options.ts`:
 ### Firebase Console
 
 View data using Firebase Console:
+
 ```
 # Realtime Database
 https://console.firebase.google.com/project/YOUR_PROJECT_ID/database
@@ -352,6 +374,7 @@ https://console.firebase.google.com/project/YOUR_PROJECT_ID/firestore
 ### Debug Mode
 
 Enable debug logging by setting in browser console:
+
 ```javascript
 localStorage.setItem('debug', 'snow-globe:*');
 ```
@@ -401,6 +424,7 @@ CMD ["npm", "start"]
 ## 📊 Performance & Monitoring
 
 ### Performance Metrics
+
 - Theme updates sent immediately upon selection (no throttling needed)
 - Firebase handles queue state changes efficiently with minimal latency
 - 60-second turn duration optimized for user engagement
@@ -409,12 +433,14 @@ CMD ["npm", "start"]
 - React re-renders optimized with proper dependency arrays
 
 ### Monitoring
+
 - Monitor Firebase quota and billing usage
 - Track Firebase connection count in console
 - Monitor Firestore document count and storage
 - Set up uptime monitoring for production
 
 ### Scaling Considerations
+
 - Firebase handles scaling automatically
 - Use Firebase App Check for DDoS protection
 - Implement client-side rate limiting
@@ -424,14 +450,16 @@ CMD ["npm", "start"]
 ## 🧪 Testing
 
 ### Manual Testing
+
 - Open multiple browser tabs to simulate multiple users
-- Test queue ordering and position updates  
+- Test queue ordering and position updates
 - Verify 60-second timer functionality and automatic progression
 - Test theme selection and real-time updates to TouchDesigner
 - Test admin dashboard functionality with correct password
 - Test reconnection after network interruption
 
 ### Automated Testing (Future)
+
 - Unit tests for queue management logic
 - Integration tests for Firebase connections
 - End-to-end tests for theme selection flows
@@ -447,6 +475,7 @@ CMD ["npm", "start"]
 5. Open a Pull Request
 
 ### Development Guidelines
+
 - Follow TypeScript best practices
 - Add proper error handling
 - Update documentation for new features
@@ -458,13 +487,15 @@ CMD ["npm", "start"]
 ### Firebase API Reference
 
 **Key Functions in QueueManager:**
+
 - `joinQueue(sessionId)`: Add user to queue
-- `leaveQueue(sessionId)`: Remove user from queue  
+- `leaveQueue(sessionId)`: Remove user from queue
 - `submitTheme(sessionId, row1, row2, row3)`: Submit Christmas theme selection
 - `listenToQueueState(callback)`: Subscribe to queue updates
 - `generateSessionId()`: Create unique session ID
 
 **Firebase Realtime Database Paths:**
+
 - `/queue/activeUser`: Current active user data
 - `/queue/waitingUsers/{sessionId}`: User in waiting queue
 - `/queue/queueLength`: Number of users waiting
@@ -496,6 +527,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 For questions or issues:
+
 1. Check the troubleshooting section above
 2. Review the WARP.md file for technical details
 3. Open an issue on GitHub

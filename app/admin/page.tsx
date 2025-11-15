@@ -27,12 +27,12 @@ export default function AdminDashboard() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    
+
     if (!login(password)) {
       setLoginError('Invalid password');
       return;
     }
-    
+
     setPassword('');
   };
 
@@ -46,24 +46,25 @@ export default function AdminDashboard() {
     setResetStatus('Resetting...');
 
     try {
-      const options = type === 'quick' 
-        ? { clearQueue: true, clearSliderValues: true, initialize: true }
-        : { clearQueue: true, clearSliderValues: true, clearSessions: true, initialize: true };
+      const options =
+        type === 'quick'
+          ? { clearQueue: true, clearSliderValues: true, initialize: true }
+          : { clearQueue: true, clearSliderValues: true, clearSessions: true, initialize: true };
 
       const result = await adminOps.resetQueue(options);
-      
+
       if (result.success) {
         setResetStatus(`✅ ${type === 'quick' ? 'Quick' : 'Full'} reset completed`);
       } else if (result.errors.length > 0) {
         // Partial success with some errors
         const errorMessages = result.errors.join('\n');
-        if (type === 'full' && result.errors.some(e => e.includes('Firestore sessions'))) {
+        if (type === 'full' && result.errors.some((e) => e.includes('Firestore sessions'))) {
           setResetStatus(`⚠️ Reset partially completed. Note: ${result.errors[0]}`);
         } else {
           setResetStatus(`⚠️ Reset completed with warnings:\n${errorMessages}`);
         }
       }
-      
+
       setTimeout(() => setResetStatus(''), 5000);
     } catch (error) {
       console.error('Reset error:', error);
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
   // Handle skip active user
   const handleSkipUser = async () => {
     if (!stats?.activeUser) return;
-    
+
     if (!window.confirm('Skip current active user?')) {
       return;
     }
@@ -114,7 +115,16 @@ export default function AdminDashboard() {
     return (
       <div className={styles.loginContainer}>
         <div className={styles.loginCard}>
-          <p style={{ color: '#06b6d4', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em' }}>[SYSTEM] Loading...</p>
+          <p
+            style={{
+              color: '#06b6d4',
+              fontFamily: 'monospace',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            [SYSTEM] Loading...
+          </p>
         </div>
       </div>
     );
@@ -123,34 +133,54 @@ export default function AdminDashboard() {
   // Show login form if not authenticated
   if (!isAuthenticated) {
     const isPasswordConfigured = !!process.env.NEXT_PUBLIC_ADMIN_PASSWORD_HASH;
-    
+
     return (
       <div className={styles.loginContainer}>
         <div className={styles.loginCard}>
           <h1 className={styles.loginTitle}>Admin Dashboard</h1>
           {!isPasswordConfigured ? (
-            <div style={{ 
-              padding: '1rem', 
-              background: 'rgba(220, 38, 38, 0.1)', 
-              border: '1px solid rgba(220, 38, 38, 0.3)', 
-              marginBottom: '1rem',
-              clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
-            }}>
-              <p style={{ color: '#ef4444', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div
+              style={{
+                padding: '1rem',
+                background: 'rgba(220, 38, 38, 0.1)',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
+                marginBottom: '1rem',
+                clipPath:
+                  'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))',
+              }}
+            >
+              <p
+                style={{
+                  color: '#ef4444',
+                  fontWeight: 600,
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
                 [ERROR] Admin Password Not Configured
               </p>
-              <p style={{ color: '#f87171', fontSize: '0.75rem', marginBottom: '0.5rem', fontFamily: 'monospace' }}>
+              <p
+                style={{
+                  color: '#f87171',
+                  fontSize: '0.75rem',
+                  marginBottom: '0.5rem',
+                  fontFamily: 'monospace',
+                }}
+              >
                 Please set the admin password in your environment:
               </p>
-              <code style={{ 
-                display: 'block', 
-                padding: '0.5rem', 
-                background: 'rgba(31, 41, 55, 0.5)', 
-                border: '1px solid rgba(75, 85, 99, 0.5)',
-                fontSize: '0.75rem',
-                color: '#06b6d4',
-                fontFamily: 'monospace'
-              }}>
+              <code
+                style={{
+                  display: 'block',
+                  padding: '0.5rem',
+                  background: 'rgba(31, 41, 55, 0.5)',
+                  border: '1px solid rgba(75, 85, 99, 0.5)',
+                  fontSize: '0.75rem',
+                  color: '#06b6d4',
+                  fontFamily: 'monospace',
+                }}
+              >
                 NEXT_PUBLIC_ADMIN_PASSWORD_HASH=your_secure_password
               </code>
             </div>
@@ -171,9 +201,7 @@ export default function AdminDashboard() {
                   autoFocus
                 />
               </div>
-              {loginError && (
-                <div className={styles.errorMessage}>{loginError}</div>
-              )}
+              {loginError && <div className={styles.errorMessage}>{loginError}</div>}
               <button type="submit" className={styles.loginBtn}>
                 Login
               </button>
@@ -195,7 +223,16 @@ export default function AdminDashboard() {
             Logout
           </button>
         </header>
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#06b6d4', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '2rem',
+            color: '#06b6d4',
+            fontFamily: 'monospace',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}
+        >
           [SYSTEM] Loading queue statistics...
         </div>
       </div>
@@ -208,12 +245,12 @@ export default function AdminDashboard() {
       <header className={styles.header}>
         <h1 className={styles.title}>Concrete Canopy Admin Dashboard</h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link 
-            href="/admin/analytics" 
+          <Link
+            href="/admin/analytics"
             className={styles.logoutBtn}
             style={{
               background: 'linear-gradient(135deg, #06b6d4, #9333ea)',
-              borderColor: '#06b6d4'
+              borderColor: '#06b6d4',
             }}
           >
             📊 Analytics
@@ -255,18 +292,20 @@ export default function AdminDashboard() {
 
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Avg Slider Value</div>
-          <p 
+          <p
             className={`${styles.statValue} ${styles.statValueSmall}`}
             style={{
-              color: stats?.averageSliderValue && stats.averageSliderValue > 0.1 ? '#10b981' : 
-                     stats?.averageSliderValue && stats.averageSliderValue < -0.1 ? '#ef4444' : 
-                     '#06b6d4'
+              color:
+                stats?.averageSliderValue && stats.averageSliderValue > 0.1
+                  ? '#10b981'
+                  : stats?.averageSliderValue && stats.averageSliderValue < -0.1
+                    ? '#ef4444'
+                    : '#06b6d4',
             }}
           >
-            {stats?.averageSliderValue !== undefined ? 
-              (stats.averageSliderValue >= 0 ? '+' : '') + stats.averageSliderValue.toFixed(2) : 
-              '0.00'
-            }
+            {stats?.averageSliderValue !== undefined
+              ? (stats.averageSliderValue >= 0 ? '+' : '') + stats.averageSliderValue.toFixed(2)
+              : '0.00'}
           </p>
         </div>
       </div>
@@ -276,7 +315,7 @@ export default function AdminDashboard() {
         {/* Queue Management */}
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Queue Management</h2>
-          
+
           <div className={styles.queueList}>
             {/* Active User */}
             {stats?.activeUser && (
@@ -298,30 +337,22 @@ export default function AdminDashboard() {
             )}
 
             {/* Waiting Users */}
-            {stats?.waitingUsers && stats.waitingUsers.length > 0 ? (
-              stats.waitingUsers.map((user) => (
-                <div key={user.sessionId} className={styles.queueItem}>
-                  <div className={styles.queueInfo}>
-                    <span className={styles.queuePosition}>
-                      Position #{user.position}
-                    </span>
-                    <span className={styles.queueSession}>
-                      {user.sessionId.slice(0, 8)}...
-                    </span>
+            {stats?.waitingUsers && stats.waitingUsers.length > 0
+              ? stats.waitingUsers.map((user) => (
+                  <div key={user.sessionId} className={styles.queueItem}>
+                    <div className={styles.queueInfo}>
+                      <span className={styles.queuePosition}>Position #{user.position}</span>
+                      <span className={styles.queueSession}>{user.sessionId.slice(0, 8)}...</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveUser(user.sessionId)}
+                      className={styles.removeBtn}
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleRemoveUser(user.sessionId)}
-                    className={styles.removeBtn}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            ) : (
-              !stats?.activeUser && (
-                <div className={styles.emptyQueue}>Queue is empty</div>
-              )
-            )}
+                ))
+              : !stats?.activeUser && <div className={styles.emptyQueue}>Queue is empty</div>}
           </div>
 
           {/* Current Slider Value */}
@@ -332,10 +363,10 @@ export default function AdminDashboard() {
                 {(stats.currentSliderValue >= 0 ? '+' : '') + stats.currentSliderValue.toFixed(3)}
               </div>
               <div className={styles.sliderBar}>
-                <div 
-                  className={styles.sliderFill} 
-                  style={{ 
-                    width: `${((stats.currentSliderValue + 1) / 2) * 100}%` 
+                <div
+                  className={styles.sliderFill}
+                  style={{
+                    width: `${((stats.currentSliderValue + 1) / 2) * 100}%`,
                   }}
                 />
               </div>
@@ -346,7 +377,7 @@ export default function AdminDashboard() {
         {/* System Controls */}
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>System Controls</h2>
-          
+
           <div className={styles.controls}>
             <button
               onClick={() => handleReset('quick')}
@@ -355,9 +386,7 @@ export default function AdminDashboard() {
             >
               Quick Reset
             </button>
-            <p className={styles.controlDesc}>
-              Clear the current queue and slider values
-            </p>
+            <p className={styles.controlDesc}>Clear the current queue and slider values</p>
 
             <button
               onClick={() => handleReset('full')}
@@ -366,40 +395,46 @@ export default function AdminDashboard() {
             >
               Full Reset
             </button>
-            <p className={styles.controlDesc}>
-              Clear everything including session history
-            </p>
+            <p className={styles.controlDesc}>Clear everything including session history</p>
 
             {resetStatus && (
-              <div 
+              <div
                 className={styles.controlDesc}
                 style={{
                   whiteSpace: 'pre-line',
                   padding: '1rem',
                   marginTop: '1rem',
-                  background: resetStatus.includes('❌') ? 'rgba(220, 38, 38, 0.1)' : 
-                              resetStatus.includes('⚠️') ? 'rgba(245, 158, 11, 0.1)' : 
-                              'rgba(16, 185, 129, 0.1)',
-                  color: resetStatus.includes('❌') ? '#ef4444' : 
-                         resetStatus.includes('⚠️') ? '#f59e0b' : 
-                         '#10b981',
-                  border: `1px solid ${resetStatus.includes('❌') ? 'rgba(220, 38, 38, 0.3)' : 
-                          resetStatus.includes('⚠️') ? 'rgba(245, 158, 11, 0.3)' : 
-                          'rgba(16, 185, 129, 0.3)'}`,
-                  clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))',
+                  background: resetStatus.includes('❌')
+                    ? 'rgba(220, 38, 38, 0.1)'
+                    : resetStatus.includes('⚠️')
+                      ? 'rgba(245, 158, 11, 0.1)'
+                      : 'rgba(16, 185, 129, 0.1)',
+                  color: resetStatus.includes('❌')
+                    ? '#ef4444'
+                    : resetStatus.includes('⚠️')
+                      ? '#f59e0b'
+                      : '#10b981',
+                  border: `1px solid ${
+                    resetStatus.includes('❌')
+                      ? 'rgba(220, 38, 38, 0.3)'
+                      : resetStatus.includes('⚠️')
+                        ? 'rgba(245, 158, 11, 0.3)'
+                        : 'rgba(16, 185, 129, 0.3)'
+                  }`,
+                  clipPath:
+                    'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))',
                   fontFamily: 'monospace',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.05em',
                 }}
               >
                 {resetStatus}
               </div>
             )}
           </div>
-
         </div>
       </div>
-      
+
       {/* Footer */}
       <Footer />
     </div>

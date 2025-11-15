@@ -24,11 +24,11 @@ export default function AdminAnalytics() {
   const [viewMode, setViewMode] = useState<'bar' | 'line'>('line'); // Start with line view to show animation
   const [lineAnimationComplete, setLineAnimationComplete] = useState(false);
   const pathRef = useRef<SVGPathElement>(null);
-  
+
   useEffect(() => {
     fetchSessions();
   }, []);
-  
+
   // Animate line drawing when data loads and in line view
   useEffect(() => {
     if (!loading && sessions.length > 0 && viewMode === 'line' && pathRef.current) {
@@ -36,22 +36,22 @@ export default function AdminAnalytics() {
       const startDelay = setTimeout(() => {
         // Reset animation
         setLineAnimationComplete(false);
-        
+
         if (pathRef.current) {
           // Get the total length of the path
           const pathLength = pathRef.current.getTotalLength();
-          
+
           // Set up the path for animation
           pathRef.current.style.strokeDasharray = `${pathLength}`;
           pathRef.current.style.strokeDashoffset = `${pathLength}`;
-          
+
           // Force browser to recalculate styles
           pathRef.current.getBoundingClientRect();
-          
+
           // Animate the line drawing with easing
           pathRef.current.style.transition = 'stroke-dashoffset 2.5s cubic-bezier(0.4, 0, 0.2, 1)';
           pathRef.current.style.strokeDashoffset = '0';
-          
+
           // Mark animation as complete after it finishes
           setTimeout(() => {
             setLineAnimationComplete(true);
@@ -62,7 +62,7 @@ export default function AdminAnalytics() {
           }, 2500);
         }
       }, 100);
-      
+
       return () => clearTimeout(startDelay);
     }
   }, [loading, sessions, viewMode]);
@@ -77,7 +77,7 @@ export default function AdminAnalytics() {
       const sessionsRef = collection(firestore, 'sessions');
       const q = query(sessionsRef, orderBy('startTime', 'asc'));
       const querySnapshot = await getDocs(q);
-      
+
       const sessionsData: SessionData[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() as SessionData;
@@ -86,7 +86,7 @@ export default function AdminAnalytics() {
           sessionsData.push(data);
         }
       });
-      
+
       setSessions(sessionsData);
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -101,19 +101,19 @@ export default function AdminAnalytics() {
   const padding = { top: 40, right: 40, bottom: 80, left: 60 };
   const plotWidth = graphWidth - padding.left - padding.right;
   const plotHeight = graphHeight - padding.top - padding.bottom;
-  
+
   // Scale values from [-1, 1] to graph coordinates
   const scaleY = (value: number) => {
     // value is between -1 and 1, map to plotHeight
-    return plotHeight / 2 - (value * plotHeight / 2);
+    return plotHeight / 2 - (value * plotHeight) / 2;
   };
-  
+
   const scaleX = (index: number) => {
     return (index / Math.max(sessions.length - 1, 1)) * plotWidth;
   };
 
   // Calculate statistics
-  const averages = sessions.map(s => s.statistics?.average || 0);
+  const averages = sessions.map((s) => s.statistics?.average || 0);
   const globalAverage = averages.reduce((a, b) => a + b, 0) / (averages.length || 1);
   const maxAvg = Math.max(...averages, 0);
   const minAvg = Math.min(...averages, 0);
@@ -121,7 +121,7 @@ export default function AdminAnalytics() {
   // Create SVG path for line graph
   const createLinePath = () => {
     if (sessions.length === 0) return '';
-    
+
     return sessions
       .map((session, i) => {
         const x = scaleX(i);
@@ -134,28 +134,28 @@ export default function AdminAnalytics() {
   // Create polyline points for area under curve
   const createAreaPath = () => {
     if (sessions.length === 0) return '';
-    
+
     const topPath = sessions
       .map((session, i) => `${scaleX(i)},${scaleY(session.statistics?.average || 0)}`)
       .join(' ');
-    
+
     // Use slice() to create a copy before reversing to avoid mutating original array
     const bottomPath = sessions
       .slice()
       .reverse()
       .map((_, i) => `${scaleX(sessions.length - 1 - i)},${scaleY(0)}`)
       .join(' ');
-    
+
     return topPath + ' ' + bottomPath;
   };
 
   // Format timestamp to readable time
   const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString('en-US', { 
-      month: 'short', 
+    return new Date(timestamp).toLocaleString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -169,17 +169,17 @@ export default function AdminAnalytics() {
             </h1>
             <div className="h-6 w-48 bg-gray-800 animate-pulse rounded"></div>
           </div>
-          
+
           {/* Skeleton stats cards */}
           <div className="grid grid-cols-4 gap-4 mb-8">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="border border-gray-800 p-4 bg-gray-900/50">
                 <div className="h-4 w-20 bg-gray-800 animate-pulse rounded mb-2"></div>
                 <div className="h-8 w-24 bg-gray-800 animate-pulse rounded"></div>
               </div>
             ))}
           </div>
-          
+
           {/* Skeleton graph */}
           <div className="border border-gray-800 bg-gray-900/50 p-6 h-[500px] flex items-center justify-center">
             <div className="text-cyan-400 text-xl animate-pulse">Loading session data...</div>
@@ -202,7 +202,7 @@ export default function AdminAnalytics() {
               Active sessions: {sessions.length} | Global Average: {globalAverage.toFixed(4)}
             </p>
           </div>
-          
+
           <div className="flex gap-4">
             <button
               onClick={() => setViewMode(viewMode === 'bar' ? 'line' : 'bar')}
@@ -242,7 +242,7 @@ export default function AdminAnalytics() {
                     const firstAvg = sessions[0].statistics?.average || 0;
                     const lastAvg = sessions[sessions.length - 1].statistics?.average || 0;
                     const diff = lastAvg - firstAvg;
-                    
+
                     if (Math.abs(diff) < 0.01) {
                       return <span className="text-gray-400">→ STABLE</span>;
                     } else if (diff > 0) {
@@ -263,11 +263,14 @@ export default function AdminAnalytics() {
         <div className="border border-gray-800 bg-gray-900/50 backdrop-blur p-6 relative overflow-hidden">
           {/* Animated background grid */}
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0" style={{
-              backgroundImage: `linear-gradient(cyan 1px, transparent 1px), linear-gradient(90deg, cyan 1px, transparent 1px)`,
-              backgroundSize: '50px 50px',
-              animation: 'slide 10s linear infinite'
-            }}></div>
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `linear-gradient(cyan 1px, transparent 1px), linear-gradient(90deg, cyan 1px, transparent 1px)`,
+                backgroundSize: '50px 50px',
+                animation: 'slide 10s linear infinite',
+              }}
+            ></div>
           </div>
 
           <svg
@@ -289,10 +292,10 @@ export default function AdminAnalytics() {
                 <stop offset="100%" stopColor="#ec4899" />
               </linearGradient>
               <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                 <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
             </defs>
@@ -310,7 +313,7 @@ export default function AdminAnalytics() {
                 Slider Value
               </text>
               {/* Grid lines */}
-              {[-1, -0.5, 0, 0.5, 1].map(val => (
+              {[-1, -0.5, 0, 0.5, 1].map((val) => (
                 <g key={val}>
                   <line
                     x1={0}
@@ -319,15 +322,9 @@ export default function AdminAnalytics() {
                     y2={scaleY(val)}
                     stroke={val === 0 ? '#666' : '#333'}
                     strokeWidth={val === 0 ? 2 : 1}
-                    strokeDasharray={val === 0 ? "0" : "5,5"}
+                    strokeDasharray={val === 0 ? '0' : '5,5'}
                   />
-                  <text
-                    x={-10}
-                    y={scaleY(val) + 5}
-                    fill="#666"
-                    fontSize="12"
-                    textAnchor="end"
-                  >
+                  <text x={-10} y={scaleY(val) + 5} fill="#666" fontSize="12" textAnchor="end">
                     {val.toFixed(1)}
                   </text>
                 </g>
@@ -344,12 +341,7 @@ export default function AdminAnalytics() {
                 strokeDasharray="10,5"
                 opacity={0.5}
               />
-              <text
-                x={plotWidth + 5}
-                y={scaleY(globalAverage) + 5}
-                fill="#00ffff"
-                fontSize="10"
-              >
+              <text x={plotWidth + 5} y={scaleY(globalAverage) + 5} fill="#00ffff" fontSize="10">
                 AVG
               </text>
 
@@ -422,7 +414,7 @@ export default function AdminAnalytics() {
                     fill="url(#barGradient)"
                     opacity={lineAnimationComplete ? 0.3 : 0}
                     style={{
-                      transition: 'opacity 1s ease-out 1.5s'
+                      transition: 'opacity 1s ease-out 1.5s',
                     }}
                   />
                   <path
@@ -451,10 +443,12 @@ export default function AdminAnalytics() {
                           opacity={isHovered ? 1 : lineAnimationComplete ? 0.8 : 0}
                           onMouseEnter={() => setHoveredIndex(i)}
                           onMouseLeave={() => setHoveredIndex(null)}
-                          style={{ 
-                            transition: 'all 0.3s ease', 
+                          style={{
+                            transition: 'all 0.3s ease',
                             cursor: 'pointer',
-                            animation: lineAnimationComplete ? 'none' : `fadeIn 0.3s ease-out ${delay}s forwards`
+                            animation: lineAnimationComplete
+                              ? 'none'
+                              : `fadeIn 0.3s ease-out ${delay}s forwards`,
                           }}
                         />
                         {isHovered && (
@@ -497,23 +491,12 @@ export default function AdminAnalytics() {
 
               {/* X-axis labels */}
               <g>
-                <text
-                  x={0}
-                  y={plotHeight + 30}
-                  fill="#666"
-                  fontSize="10"
-                  textAnchor="start"
-                >
+                <text x={0} y={plotHeight + 30} fill="#666" fontSize="10" textAnchor="start">
                   {sessions[0] && formatTime(sessions[0].startTime)}
                 </text>
-                <text
-                  x={plotWidth}
-                  y={plotHeight + 30}
-                  fill="#666"
-                  fontSize="10"
-                  textAnchor="end"
-                >
-                  {sessions[sessions.length - 1] && formatTime(sessions[sessions.length - 1].startTime)}
+                <text x={plotWidth} y={plotHeight + 30} fill="#666" fontSize="10" textAnchor="end">
+                  {sessions[sessions.length - 1] &&
+                    formatTime(sessions[sessions.length - 1].startTime)}
                 </text>
                 <text
                   x={plotWidth / 2}
@@ -525,7 +508,6 @@ export default function AdminAnalytics() {
                   Session Timeline →
                 </text>
               </g>
-
             </g>
           </svg>
         </div>
@@ -556,7 +538,7 @@ export default function AdminAnalytics() {
             transform: translate(50px, 50px);
           }
         }
-        
+
         @keyframes fadeIn {
           0% {
             opacity: 0;
@@ -567,9 +549,10 @@ export default function AdminAnalytics() {
             transform: scale(1);
           }
         }
-        
+
         @keyframes pulse {
-          0%, 100% {
+          0%,
+          100% {
             opacity: 0.3;
           }
           50% {

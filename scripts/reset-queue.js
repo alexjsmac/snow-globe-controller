@@ -38,7 +38,7 @@ const firestore = getFirestore(app);
 // Create readline interface for user input
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 // Helper function to prompt for user confirmation
@@ -60,18 +60,18 @@ async function getQueueStats() {
   try {
     const queueRef = ref(realtimeDb, 'queue');
     const snapshot = await get(queueRef);
-    
+
     if (!snapshot.exists()) {
       return null;
     }
-    
+
     const data = snapshot.val();
     const stats = {
       hasActiveUser: !!data.activeUser,
       waitingUsersCount: data.waitingUsers ? Object.keys(data.waitingUsers).length : 0,
-      queueLength: data.queueLength || 0
+      queueLength: data.queueLength || 0,
     };
-    
+
     return stats;
   } catch (error) {
     console.error('Error getting queue stats:', error);
@@ -134,7 +134,7 @@ async function clearFirestoreSessions() {
   try {
     const sessionsRef = collection(firestore, 'sessions');
     const snapshot = await getDocs(sessionsRef);
-    
+
     let count = 0;
     for (const doc of snapshot.docs) {
       await deleteDoc(doc.ref);
@@ -143,7 +143,7 @@ async function clearFirestoreSessions() {
         print(`    Deleted ${count}/${snapshot.size} sessions...`, 'cyan');
       }
     }
-    
+
     print(`  ✅ ${count} Firestore session summaries cleared`, 'green');
   } catch (error) {
     if (error.code === 'permission-denied') {
@@ -161,9 +161,9 @@ async function initializeEmptyQueue() {
   print('  Initializing empty queue structure...', 'cyan');
   const queueRef = ref(realtimeDb, 'queue');
   await set(queueRef, {
-    activeUser: "none",
+    activeUser: 'none',
     waitingUsers: {},
-    queueLength: 0
+    queueLength: 0,
   });
   print('  ✅ Empty queue structure initialized', 'green');
 }
@@ -173,10 +173,10 @@ async function initializeThemeValues() {
   print('  Initializing themeValues/current...', 'cyan');
   const themeRef = ref(realtimeDb, 'themeValues/current');
   await set(themeRef, {
-    row1: "none",
-    row2: "none",
-    row3: "none",
-    sessionId: "none",
+    row1: 'none',
+    row2: 'none',
+    row3: 'none',
+    sessionId: 'none',
     timestamp: serverTimestamp(),
   });
   print('  ✅ themeValues/current initialized', 'green');
@@ -186,33 +186,32 @@ async function initializeThemeValues() {
 async function resetQueue(options = {}) {
   try {
     print('\n🔄 Starting queue reset process...', 'yellow');
-    
+
     // Clear Realtime Database data
     if (options.clearQueue !== false) {
       await clearRealtimeQueue();
     }
-    
+
     if (options.clearSystem !== false) {
       await clearSystemState();
     }
-    
+
     if (options.clearRealtimeSessions) {
       await clearRealtimeSessions();
     }
-    
+
     // Clear Firestore data
     if (options.clearFirestoreSessions) {
       await clearFirestoreSessions();
     }
-    
+
     // Initialize empty structure
     if (options.initialize) {
       await initializeEmptyQueue();
       await initializeThemeValues();
     }
-    
+
     print('\n✨ Queue reset completed successfully!', 'green');
-    
   } catch (error) {
     print(`\n❌ Error during reset: ${error.message}`, 'red');
     throw error;
@@ -224,11 +223,11 @@ async function interactiveCLI() {
   print('\n═══════════════════════════════════════════', 'magenta');
   print('   Queue Reset Tool   ', 'magenta');
   print('═══════════════════════════════════════════', 'magenta');
-  
+
   // Get current statistics
   print('\n📊 Current Queue Statistics:', 'blue');
   const stats = await getQueueStats();
-  
+
   if (stats) {
     print(`   • Active user: ${stats.hasActiveUser ? 'Yes' : 'No'}`, 'cyan');
     print(`   • Waiting users: ${stats.waitingUsersCount}`, 'cyan');
@@ -236,19 +235,19 @@ async function interactiveCLI() {
   } else {
     print('   • Queue is empty or not initialized', 'cyan');
   }
-  
+
   const sessionCount = await getSessionCount();
   print(`   • Stored sessions in Firestore: ${sessionCount}`, 'cyan');
-  
+
   // Show reset options
   print('\n🎯 Reset Options:', 'blue');
   print('   1. Quick reset (clear queue only)', 'cyan');
   print('   2. Full reset (clear everything)', 'cyan');
   print('   3. Custom reset (choose what to clear)', 'cyan');
   print('   4. Exit', 'cyan');
-  
+
   const choice = await askQuestion('\nSelect an option (1-4): ');
-  
+
   switch (choice) {
     case '1':
       // Quick reset
@@ -260,13 +259,13 @@ async function interactiveCLI() {
           clearSystem: true,
           clearRealtimeSessions: false,
           clearFirestoreSessions: false,
-          initialize: true
+          initialize: true,
         });
       } else {
         print('Reset cancelled', 'yellow');
       }
       break;
-      
+
     case '2':
       // Full reset
       print('\n🔥 Full Reset Selected', 'yellow');
@@ -278,13 +277,13 @@ async function interactiveCLI() {
           clearSystem: true,
           clearRealtimeSessions: true,
           clearFirestoreSessions: true,
-          initialize: true
+          initialize: true,
         });
       } else {
         print('Reset cancelled', 'yellow');
       }
       break;
-      
+
     case '3':
       // Custom reset
       print('\n⚙️  Custom Reset Selected', 'yellow');
@@ -293,39 +292,39 @@ async function interactiveCLI() {
         clearSystem: false,
         clearRealtimeSessions: false,
         clearFirestoreSessions: false,
-        initialize: false
+        initialize: false,
       };
-      
+
       const q1 = await askQuestion('Clear queue data? (y/n): ');
       options.clearQueue = q1.toLowerCase() === 'y';
-      
+
       const q3 = await askQuestion('Clear system state? (y/n): ');
       options.clearSystem = q3.toLowerCase() === 'y';
-      
+
       const q4 = await askQuestion('Clear Realtime Database sessions? (y/n): ');
       options.clearRealtimeSessions = q4.toLowerCase() === 'y';
-      
+
       const q5 = await askQuestion('Clear Firestore session summaries? (y/n): ');
       options.clearFirestoreSessions = q5.toLowerCase() === 'y';
-      
+
       const q6 = await askQuestion('Initialize empty queue structure? (y/n): ');
       options.initialize = q6.toLowerCase() === 'y';
-      
-      if (Object.values(options).some(v => v)) {
+
+      if (Object.values(options).some((v) => v)) {
         await resetQueue(options);
       } else {
         print('No options selected, nothing to reset', 'yellow');
       }
       break;
-      
+
     case '4':
       print('Exiting...', 'cyan');
       break;
-      
+
     default:
       print('Invalid option selected', 'red');
   }
-  
+
   rl.close();
   process.exit(0);
 }
@@ -353,7 +352,7 @@ if (args.includes('--quick')) {
       clearSystem: true,
       clearRealtimeSessions: false,
       clearFirestoreSessions: false,
-      initialize: true
+      initialize: true,
     }).then(() => process.exit(0));
   } else {
     print('Quick reset will clear the current queue.', 'yellow');
@@ -364,7 +363,7 @@ if (args.includes('--quick')) {
           clearSystem: true,
           clearRealtimeSessions: false,
           clearFirestoreSessions: false,
-          initialize: true
+          initialize: true,
         }).then(() => {
           rl.close();
           process.exit(0);
@@ -384,7 +383,7 @@ if (args.includes('--quick')) {
       clearSystem: true,
       clearRealtimeSessions: true,
       clearFirestoreSessions: true,
-      initialize: true
+      initialize: true,
     }).then(() => process.exit(0));
   } else {
     print('⚠️  WARNING: Full reset will delete ALL data including session history!', 'red');
@@ -395,7 +394,7 @@ if (args.includes('--quick')) {
           clearSystem: true,
           clearRealtimeSessions: true,
           clearFirestoreSessions: true,
-          initialize: true
+          initialize: true,
         }).then(() => {
           rl.close();
           process.exit(0);

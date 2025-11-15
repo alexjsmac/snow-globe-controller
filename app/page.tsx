@@ -4,22 +4,16 @@ import { useState } from 'react';
 import { useSocket } from '@/hooks/useFirebaseQueue';
 import { ThemeSelector } from '@/components/ThemeSelector';
 import { Footer } from '@/components/Footer';
-import { 
-  colorOptions, 
-  patternOptions, 
-  effectOptions, 
-  defaultThemeSelection 
+import {
+  colorOptions,
+  patternOptions,
+  effectOptions,
+  defaultThemeSelection,
 } from '@/lib/theme-options';
 
 export default function Home() {
-  const {
-    isConnected,
-    isActive,
-    queuePosition,
-    queueLength,
-    remainingTime,
-    submitTheme
-  } = useSocket();
+  const { isConnected, isActive, queuePosition, queueLength, remainingTime, submitTheme } =
+    useSocket();
 
   const [selectedRow1, setSelectedRow1] = useState(defaultThemeSelection.row1);
   const [selectedRow2, setSelectedRow2] = useState(defaultThemeSelection.row2);
@@ -60,11 +54,14 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-red-950 via-green-950 to-red-950 relative overflow-hidden">
       {/* Christmas snowflakes background effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 via-green-900/20 to-red-900/30">
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFFFFF' fill-opacity='0.2'%3E%3Cpath d='M30 30 L32 28 L30 26 L28 28 Z M30 30 L28 32 L30 34 L32 32 Z M30 30 L26 30 L24 32 L26 34 L30 30 Z M30 30 L34 30 L36 28 L34 26 L30 30 Z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFFFFF' fill-opacity='0.2'%3E%3Cpath d='M30 30 L32 28 L30 26 L28 28 Z M30 30 L28 32 L30 34 L32 32 Z M30 30 L26 30 L24 32 L26 34 L30 30 Z M30 30 L34 30 L36 28 L34 26 L30 30 Z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        ></div>
       </div>
-      
+
       <div className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
         {/* Header */}
         <header className="text-center mb-12">
@@ -81,12 +78,16 @@ export default function Home() {
         {/* Connection Status */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-2">
-            <div className={`w-4 h-4 rounded-full ${
-              isConnected ? 'bg-green-400 shadow-green-400/50' : 'bg-red-600 shadow-red-600/50'
-            } shadow-lg animate-pulse`} />
-            <span className={`text-sm font-semibold tracking-wider ${
-              isConnected ? 'text-green-300' : 'text-red-400'
-            }`}>
+            <div
+              className={`w-4 h-4 rounded-full ${
+                isConnected ? 'bg-green-400 shadow-green-400/50' : 'bg-red-600 shadow-red-600/50'
+              } shadow-lg animate-pulse`}
+            />
+            <span
+              className={`text-sm font-semibold tracking-wider ${
+                isConnected ? 'text-green-300' : 'text-red-400'
+              }`}
+            >
               {isConnected ? '✨ Connected to Christmas Magic ✨' : '❌ Connection Lost'}
             </span>
           </div>
@@ -117,12 +118,14 @@ export default function Home() {
                   <div className="text-4xl font-bold text-green-300 tabular-nums">
                     {formatTime(remainingTime)}
                   </div>
-                  <div className="text-sm text-green-200 uppercase tracking-wider">Time Remaining</div>
+                  <div className="text-sm text-green-200 uppercase tracking-wider">
+                    Time Remaining
+                  </div>
                 </div>
               </div>
               {/* Progress bar */}
               <div className="mt-4 h-2 bg-green-950 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-green-400 to-red-400 transition-all duration-1000 ease-linear"
                   style={{ width: `${(remainingTime / 60) * 100}%` }}
                 />
@@ -136,7 +139,9 @@ export default function Home() {
                 🎄 In Queue 🎄
               </h2>
               <p className="text-center text-xl text-green-100 mt-4">
-                Position: <span className="text-yellow-300 font-bold text-3xl">{queuePosition}</span> of {queueLength}
+                Position:{' '}
+                <span className="text-yellow-300 font-bold text-3xl">{queuePosition}</span> of{' '}
+                {queueLength}
               </p>
               <p className="text-center text-lg text-green-200 mt-2">
                 Estimated wait: {formatTime(queuePosition * 60)}
@@ -179,26 +184,26 @@ export default function Home() {
               <div className="flex justify-center gap-8 text-center">
                 <div>
                   <div className="text-5xl mb-2">
-                    {colorOptions.find(o => o.id === selectedRow1)?.symbol}
+                    {colorOptions.find((o) => o.id === selectedRow1)?.symbol}
                   </div>
                   <div className="text-green-200 text-sm">
-                    {colorOptions.find(o => o.id === selectedRow1)?.name}
+                    {colorOptions.find((o) => o.id === selectedRow1)?.name}
                   </div>
                 </div>
                 <div>
                   <div className="text-5xl mb-2">
-                    {patternOptions.find(o => o.id === selectedRow2)?.symbol}
+                    {patternOptions.find((o) => o.id === selectedRow2)?.symbol}
                   </div>
                   <div className="text-green-200 text-sm">
-                    {patternOptions.find(o => o.id === selectedRow2)?.name}
+                    {patternOptions.find((o) => o.id === selectedRow2)?.name}
                   </div>
                 </div>
                 <div>
                   <div className="text-5xl mb-2">
-                    {effectOptions.find(o => o.id === selectedRow3)?.symbol}
+                    {effectOptions.find((o) => o.id === selectedRow3)?.symbol}
                   </div>
                   <div className="text-green-200 text-sm">
-                    {effectOptions.find(o => o.id === selectedRow3)?.name}
+                    {effectOptions.find((o) => o.id === selectedRow3)?.name}
                   </div>
                 </div>
               </div>
@@ -243,16 +248,18 @@ export default function Home() {
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-red-900/30 border-2 border-green-500 rounded-lg">
-              <div className="text-4xl font-bold text-green-300 tabular-nums">
-                {queueLength}
+              <div className="text-4xl font-bold text-green-300 tabular-nums">{queueLength}</div>
+              <div className="text-sm text-green-200 uppercase tracking-wider mt-2">
+                People Waiting
               </div>
-              <div className="text-sm text-green-200 uppercase tracking-wider mt-2">People Waiting</div>
             </div>
             <div className="text-center p-4 bg-green-900/30 border-2 border-red-500 rounded-lg">
               <div className="text-4xl font-bold text-red-300">
                 {isYourTurn ? '🎉' : queuePosition > 0 ? `#${queuePosition}` : '—'}
               </div>
-              <div className="text-sm text-red-200 uppercase tracking-wider mt-2">Your Position</div>
+              <div className="text-sm text-red-200 uppercase tracking-wider mt-2">
+                Your Position
+              </div>
             </div>
           </div>
         </div>
@@ -265,7 +272,7 @@ export default function Home() {
           </p>
         </div>
       </div>
-      
+
       {/* Footer */}
       <Footer />
     </div>
