@@ -1,6 +1,7 @@
 import { realtimeDb, firestore } from './firebase-config';
 import { ref, remove, set, get, onValue, off } from 'firebase/database';
 import { collection, getDocs, deleteDoc, query, orderBy, limit } from 'firebase/firestore';
+import { resetThemeSelection } from './theme-service';
 import type { SessionSummary } from './types';
 
 export interface QueueStatistics {
@@ -251,6 +252,9 @@ class AdminOperations {
           waitingUsers: {},
           queueLength: 0,
         });
+
+        // Also initialize themeValues/current so TouchDesigner always sees a stable JSON object
+        await resetThemeSelection();
       }
 
       return {

@@ -52,11 +52,15 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     queueUnsubscribe.current = firebaseQueueManager.listenToQueueState((queueState: QueueState) => {
       setQueueLength(queueState.queueLength);
 
-      // Check if current user is active
-      const userIsActive = queueState.activeUser?.sessionId === sessionId;
+      // Check if current user is active (make sure activeUser is an object, not "none")
+      const userIsActive = !!(
+        queueState.activeUser &&
+        typeof queueState.activeUser === 'object' &&
+        queueState.activeUser.sessionId === sessionId
+      );
       setIsActive(userIsActive);
 
-      if (userIsActive && queueState.activeUser) {
+      if (userIsActive && queueState.activeUser && typeof queueState.activeUser === 'object') {
         setQueuePosition(0);
         startCountdown(queueState.activeUser.endTime);
       } else {

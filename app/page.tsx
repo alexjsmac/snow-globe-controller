@@ -35,6 +35,14 @@ export default function Home() {
     }
   };
 
+  const handleGoAgain = () => {
+    // Reset local state so the guest can pick a new theme and rejoin the queue
+    setHasSubmitted(false);
+    setSelectedRow1(defaultThemeSelection.row1);
+    setSelectedRow2(defaultThemeSelection.row2);
+    setSelectedRow3(defaultThemeSelection.row3);
+  };
+
   // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -46,6 +54,7 @@ export default function Home() {
   const showSubmitButton = !hasSubmitted && queuePosition === -1;
   const isInQueue = queuePosition > 0;
   const isYourTurn = isActive && queuePosition === 0;
+  const showGoAgainButton = hasSubmitted && !isYourTurn && queuePosition === -1;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-950 via-green-950 to-red-950 relative overflow-hidden">
@@ -197,7 +206,7 @@ export default function Home() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-4">
             {showSubmitButton && (
               <button
                 onClick={handleSubmit}
@@ -214,6 +223,15 @@ export default function Home() {
                   ✨ Enjoy your minute of Christmas magic! ✨
                 </p>
               </div>
+            )}
+
+            {showGoAgainButton && (
+              <button
+                onClick={handleGoAgain}
+                className="mt-2 px-10 py-4 border-2 border-green-400 text-green-200 font-bold uppercase tracking-wider rounded-lg bg-black/40 hover:bg-green-900/40 hover:border-green-300 transition-colors"
+              >
+                GO AGAIN
+              </button>
             )}
           </div>
         </div>

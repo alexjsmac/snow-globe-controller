@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, remove, get, set } = require('firebase/database');
-const { getFirestore, collection, getDocs, deleteDoc } = require('firebase/firestore');
-const readline = require('readline');
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, remove, get, set, serverTimestamp } from 'firebase/database';
+import { getFirestore, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import readline from 'readline';
 
 // Load environment variables
-require('dotenv').config({ path: '.env.local' });
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
 // Color codes for terminal output
 const colors = {
@@ -102,14 +103,6 @@ async function clearRealtimeQueue() {
   print('  ✅ Queue data cleared', 'green');
 }
 
-// Clear slider values
-async function clearSliderValues() {
-  print('  Clearing slider values...', 'cyan');
-  const sliderRef = ref(realtimeDb, 'sliderValues');
-  await remove(sliderRef);
-  print('  ✅ Slider values cleared', 'green');
-}
-
 // Clear system state
 async function clearSystemState() {
   print('  Clearing system state...', 'cyan');
@@ -168,11 +161,25 @@ async function initializeEmptyQueue() {
   print('  Initializing empty queue structure...', 'cyan');
   const queueRef = ref(realtimeDb, 'queue');
   await set(queueRef, {
-    activeUser: null,
+    activeUser: "none",
     waitingUsers: {},
     queueLength: 0
   });
   print('  ✅ Empty queue structure initialized', 'green');
+}
+
+// Initialize themeValues/current with "none" placeholders so TouchDesigner sees a stable object
+async function initializeThemeValues() {
+  print('  Initializing themeValues/current...', 'cyan');
+  const themeRef = ref(realtimeDb, 'themeValues/current');
+  await set(themeRef, {
+    row1: "none",
+    row2: "none",
+    row3: "none",
+    sessionId: "none",
+    timestamp: serverTimestamp(),
+  });
+  print('  ✅ themeValues/current initialized', 'green');
 }
 
 // Main reset function
@@ -183,10 +190,6 @@ async function resetQueue(options = {}) {
     // Clear Realtime Database data
     if (options.clearQueue !== false) {
       await clearRealtimeQueue();
-    }
-    
-    if (options.clearSlider !== false) {
-      await clearSliderValues();
     }
     
     if (options.clearSystem !== false) {
@@ -205,6 +208,7 @@ async function resetQueue(options = {}) {
     // Initialize empty structure
     if (options.initialize) {
       await initializeEmptyQueue();
+      await initializeThemeValues();
     }
     
     print('\n✨ Queue reset completed successfully!', 'green');
@@ -218,7 +222,7 @@ async function resetQueue(options = {}) {
 // Interactive CLI
 async function interactiveCLI() {
   print('\n═══════════════════════════════════════════', 'magenta');
-  print('   TouchDesigner Slider Queue Reset Tool   ', 'magenta');
+  print('   Queue Reset Tool   ', 'magenta');
   print('═══════════════════════════════════════════', 'magenta');
   
   // Get current statistics
@@ -253,7 +257,6 @@ async function interactiveCLI() {
       if (confirm1.toLowerCase() === 'y') {
         await resetQueue({
           clearQueue: true,
-          clearSlider: true,
           clearSystem: true,
           clearRealtimeSessions: false,
           clearFirestoreSessions: false,
@@ -272,7 +275,6 @@ async function interactiveCLI() {
       if (confirm2.toLowerCase() === 'yes') {
         await resetQueue({
           clearQueue: true,
-          clearSlider: true,
           clearSystem: true,
           clearRealtimeSessions: true,
           clearFirestoreSessions: true,
@@ -288,7 +290,6 @@ async function interactiveCLI() {
       print('\n⚙️  Custom Reset Selected', 'yellow');
       const options = {
         clearQueue: false,
-        clearSlider: false,
         clearSystem: false,
         clearRealtimeSessions: false,
         clearFirestoreSessions: false,
@@ -297,9 +298,6 @@ async function interactiveCLI() {
       
       const q1 = await askQuestion('Clear queue data? (y/n): ');
       options.clearQueue = q1.toLowerCase() === 'y';
-      
-      const q2 = await askQuestion('Clear slider values? (y/n): ');
-      options.clearSlider = q2.toLowerCase() === 'y';
       
       const q3 = await askQuestion('Clear system state? (y/n): ');
       options.clearSystem = q3.toLowerCase() === 'y';
@@ -352,7 +350,6 @@ if (args.includes('--quick')) {
   if (force) {
     resetQueue({
       clearQueue: true,
-      clearSlider: true,
       clearSystem: true,
       clearRealtimeSessions: false,
       clearFirestoreSessions: false,
@@ -364,7 +361,6 @@ if (args.includes('--quick')) {
       if (answer.toLowerCase() === 'y') {
         resetQueue({
           clearQueue: true,
-          clearSlider: true,
           clearSystem: true,
           clearRealtimeSessions: false,
           clearFirestoreSessions: false,
@@ -385,7 +381,6 @@ if (args.includes('--quick')) {
   if (force) {
     resetQueue({
       clearQueue: true,
-      clearSlider: true,
       clearSystem: true,
       clearRealtimeSessions: true,
       clearFirestoreSessions: true,
@@ -397,7 +392,6 @@ if (args.includes('--quick')) {
       if (answer.toLowerCase() === 'yes') {
         resetQueue({
           clearQueue: true,
-          clearSlider: true,
           clearSystem: true,
           clearRealtimeSessions: true,
           clearFirestoreSessions: true,

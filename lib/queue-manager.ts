@@ -1,7 +1,7 @@
 import { realtimeDb } from './firebase-config';
 import { ref, set, remove, onValue, off, serverTimestamp as rtdbServerTimestamp, get } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
-import { updateThemeSelection } from './theme-service';
+import { updateThemeSelection, resetThemeSelection } from './theme-service';
 import { saveThemeSession } from './session-service';
 import type {
   QueueUser, 
@@ -66,6 +66,10 @@ export class FirebaseQueueManager {
     try {
       const userRef = ref(realtimeDb, `queue/waitingUsers/${sessionId}`);
       await remove(userRef);
+
+      // Also remove any stored theme selection for this session
+      const themeRef = ref(realtimeDb, `queue/themes/${sessionId}`);
+      await remove(themeRef);
       
       // Update queue length
       await this.updateQueueLength();
@@ -130,6 +134,23 @@ export class FirebaseQueueManager {
           const now = Date.now();
           const endTime = now + 60 * 1000; // 60 seconds (1 minute) from now
 
+          // IMPORTANT: Publish the user's theme BEFORE removing them from queue
+          const userThemeRef = ref(db, `queue/themes/${nextUser.sessionId}`);
+          const themeSnapshot = await get(userThemeRef);
+          const themeData = themeSnapshot.val();
+
+          if (themeData && themeData.row1 && themeData.row2 && themeData.row3) {
+            await updateThemeSelection(
+              themeData.row1,
+              themeData.row2,
+              themeData.row3,
+              nextUser.sessionId
+            );
+            console.log(`Theme published for ${nextUser.sessionId}:`, themeData);
+          } else {
+            console.warn(`No theme data found for ${nextUser.sessionId}`);
+          }
+
           // Set as active user
           const activeUserRef = ref(db, 'queue/activeUser');
           await set(activeUserRef, {
@@ -139,23 +160,11 @@ export class FirebaseQueueManager {
             remainingTime: 60
           });
 
-          // Remove from waiting queue
-          await this.leaveQueue(nextUser.sessionId);
-
-          // Publish the user's theme to themeValues/current for TouchDesigner
-          const userThemeRef = ref(db, `queue/themes/${nextUser.sessionId}`);
-          onValue(userThemeRef, async (themeSnapshot) => {
-            const themeData = themeSnapshot.val();
-            if (themeData && themeData.row1 && themeData.row2 && themeData.row3) {
-              await updateThemeSelection(
-                themeData.row1,
-                themeData.row2,
-                themeData.row3,
-                nextUser.sessionId
-              );
-              console.log(`Theme published for ${nextUser.sessionId}:`, themeData);
-            }
-          }, { onlyOnce: true });
+          // Remove from waiting queue but DON'T delete theme - we need it for session saving
+          const userRef = ref(db, `queue/waitingUsers/${nextUser.sessionId}`);
+          await remove(userRef);
+          await this.updateQueueLength();
+          console.log(`User ${nextUser.sessionId} removed from waiting queue (theme preserved for session saving)`);
 
           // Set timer to deactivate after 60 seconds
           setTimeout(() => {
@@ -186,62 +195,73 @@ export class FirebaseQueueManager {
       
       // Get current active user before removing
       onValue(activeUserRef, async (snapshot) => {
-        const activeUser = snapshot.val() as ActiveUser | null;
-        
-        if (activeUser) {
-          // Save session data before removing active user
-          try {
-            const userThemeRef = ref(db, `queue/themes/${activeUser.sessionId}`);
-            const themeSnapshot = await get(userThemeRef);
-            const themeData = themeSnapshot.val();
-            
-            if (themeData) {
-              const queueJoinTime = themeData.submittedAt || activeUser.startTime;
-              const queueWaitTime = Math.max(0, Math.floor((activeUser.startTime - queueJoinTime) / 1000));
-              
-              await saveThemeSession({
-                sessionId: activeUser.sessionId,
-                startTime: activeUser.startTime,
-                endTime: Date.now(),
-                duration: 60, // 60 second turns
-                queueJoinTime: queueJoinTime,
-                queueWaitTime: queueWaitTime,
-                theme: {
-                  row1: themeData.row1,
-                  row2: themeData.row2,
-                  row3: themeData.row3
-                }
-              });
-              
-              console.log(`Session saved for ${activeUser.sessionId} - waited ${queueWaitTime}s`);
-            }
-          } catch (error) {
-            console.error('Error saving session:', error);
-          }
-          
-          // Remove active user
-          await remove(activeUserRef);
-          
-          console.log(`User ${activeUser.sessionId} deactivated`);
+        const activeUser = snapshot.val() as ActiveUser | "none" | null;
 
-          // Check if queue is empty or activate next user
-          const waitingUsersRef = ref(db, 'queue/waitingUsers');
-          onValue(waitingUsersRef, async (waitingSnapshot) => {
-            const waitingUsers = waitingSnapshot.val();
-            const queueEmpty = !waitingUsers || Object.keys(waitingUsers).length === 0;
-            
-            if (queueEmpty) {
-              console.log('Last user deactivated and queue empty');
-            } else {
-              // Activate next user if queue not empty
-              setTimeout(() => this.activateNextUser(), 100);
-            }
-          }, { onlyOnce: true });
+        // Type guard: Check if activeUser is a valid ActiveUser object (not null, not "none")
+        if (!activeUser || activeUser === 'none' || typeof activeUser !== 'object') {
+          return;
+        }
+
+        // Save session data before removing active user
+        try {
+          const userThemeRef = ref(db, `queue/themes/${activeUser.sessionId}`);
+          const themeSnapshot = await get(userThemeRef);
+          const themeData = themeSnapshot.val();
+
+          if (themeData) {
+            const queueJoinTime = themeData.submittedAt || activeUser.startTime;
+            const queueWaitTime = Math.max(0, Math.floor((activeUser.startTime - queueJoinTime) / 1000));
+
+            const sessionData = {
+              sessionId: activeUser.sessionId,
+              startTime: activeUser.startTime,
+              endTime: Date.now(),
+              duration: 60, // 60 second turns
+              queueJoinTime: queueJoinTime,
+              queueWaitTime: queueWaitTime,
+              theme: {
+                row1: themeData.row1,
+                row2: themeData.row2,
+                row3: themeData.row3
+              }
+            };
+
+            await saveThemeSession(sessionData);
+
+            // Once the session is saved, NOW we can remove the stored theme
+            await remove(userThemeRef);
+
+            console.log(`Session saved for ${activeUser.sessionId} - waited ${queueWaitTime}s`);
+          } else {
+            console.warn(`No theme data found for ${activeUser.sessionId} - session not saved`);
+          }
+        } catch (error) {
+          console.error('Error saving session:', error);
+        }
+
+        // Check if queue is empty or activate next user
+        const waitingUsersRef = ref(db, 'queue/waitingUsers');
+        const waitingSnapshot = await get(waitingUsersRef);
+        const waitingUsers = waitingSnapshot.val();
+        const queueEmpty = !waitingUsers || Object.keys(waitingUsers).length === 0;
+
+        if (queueEmpty) {
+          console.log('Queue empty - resetting to idle state');
+          // Set activeUser to "none" instead of removing it
+          await set(activeUserRef, "none");
+          // Reset theme values to "none"
+          await resetThemeSelection();
+        } else {
+          // Remove active user before activating next
+          await remove(activeUserRef);
+          console.log(`User ${activeUser.sessionId} deactivated, activating next user`);
+          // Activate next user if queue not empty
+          setTimeout(() => this.activateNextUser(), 100);
         }
       }, { onlyOnce: true });
 
     } catch (error) {
-      console.error('Error deactivating current user:', error);
+      console.error('Error in deactivateCurrentUser:', error);
       throw error;
     }
   }
@@ -259,10 +279,10 @@ export class FirebaseQueueManager {
       const activeUserRef = ref(db, 'queue/activeUser');
       
       onValue(activeUserRef, async (snapshot) => {
-        const activeUser = snapshot.val() as ActiveUser | null;
-        
-        // If no active user, try to activate the next user from queue
-        if (!activeUser) {
+        const activeUser = snapshot.val();
+
+        // If no active user (null, "none", or undefined), try to activate the next user from queue
+        if (!activeUser || activeUser === 'none') {
           console.log('No active user found, attempting to activate next user');
           await this.activateNextUser();
         }
@@ -291,6 +311,18 @@ export class FirebaseQueueManager {
         
         const queueLengthRef = ref(db, 'queue/queueLength');
         await set(queueLengthRef, count);
+
+        // If there are no waiting users, and also no active user,
+        // reset the theme selection so TouchDesigner sees the idle state.
+        if (count === 0) {
+          const activeUserRef = ref(db, 'queue/activeUser');
+          onValue(activeUserRef, async (activeSnapshot) => {
+            const activeUser = activeSnapshot.val() as ActiveUser | null;
+            if (!activeUser) {
+              await resetThemeSelection();
+            }
+          }, { onlyOnce: true });
+        }
       }, { onlyOnce: true });
       
     } catch (error) {
@@ -339,8 +371,8 @@ export class FirebaseQueueManager {
   async getCurrentPosition(sessionId: string): Promise<number> {
     return new Promise((resolve) => {
       this.listenToQueueState((queueState) => {
-        // Check if user is active
-        if (queueState.activeUser?.sessionId === sessionId) {
+        // Check if user is active (make sure activeUser is an object, not "none")
+        if (queueState.activeUser && typeof queueState.activeUser === 'object' && queueState.activeUser.sessionId === sessionId) {
           resolve(0);
           return;
         }

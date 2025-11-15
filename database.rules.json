@@ -1,15 +1,12 @@
 {
   "rules": {
-    // Default deny all access - specific rules below override this
     ".read": false,
     ".write": false,
     "queue": {
-      // Web app needs to read/write queue state for real-time updates
       ".read": true,
       ".write": true,
-      ".validate": true,
       "activeUser": {
-        ".validate": "newData.hasChildren(['sessionId', 'startTime', 'endTime'])"
+        ".validate": "newData.val() === 'none' || newData.hasChildren(['sessionId', 'startTime', 'endTime'])"
       },
       "waitingUsers": {
         "$sessionId": {
@@ -21,16 +18,31 @@
       }
     },
     "themeValues": {
-      // Web app writes, TouchDesigner reads (allow public read for real-time updates)
       ".read": true,
       ".write": true,
-      ".validate": true,
       "current": {
-        ".validate": "newData.hasChildren(['row1', 'row2', 'row3', 'sessionId', 'timestamp'])"
+        ".validate": "newData.hasChild('row1') && newData.hasChild('row2') && newData.hasChild('row3') && newData.hasChild('sessionId') && newData.hasChild('timestamp')",
+        "row1": {
+          ".validate": "newData.isString()"
+        },
+        "row2": {
+          ".validate": "newData.isString()"
+        },
+        "row3": {
+          ".validate": "newData.isString()"
+        },
+        "sessionId": {
+          ".validate": "newData.isString()"
+        },
+        "timestamp": {
+          ".validate": "newData.val() !== null"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
     "sessions": {
-      // Web app writes session summaries, TouchDesigner reads with auth
       ".read": "auth != null",
       ".write": true,
       "$sessionId": {
@@ -38,7 +50,6 @@
       }
     },
     "systemState": {
-      // Only authenticated users (TouchDesigner) can access system state
       ".read": "auth != null",
       ".write": "auth != null",
       ".validate": "newData.hasChildren(['lastUpdated'])"

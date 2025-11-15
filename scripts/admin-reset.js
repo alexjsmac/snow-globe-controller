@@ -10,13 +10,19 @@
  * 3. Run: npm run admin-reset
  */
 
-const admin = require('firebase-admin');
-const readline = require('readline');
-const fs = require('fs');
-const path = require('path');
+import admin from 'firebase-admin';
+import readline from 'readline';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
-require('dotenv').config({ path: '.env.local' });
+dotenv.config({ path: '.env.local' });
 
 // Color codes for terminal output
 const colors = {
@@ -106,11 +112,7 @@ async function clearRealtimeDatabase() {
     // Clear queue
     await db.ref('queue').remove();
     print('  ✅ Queue cleared', 'green');
-    
-    // Clear slider values
-    await db.ref('sliderValues').remove();
-    print('  ✅ Slider values cleared', 'green');
-    
+            
     // Clear system state
     await db.ref('systemState').remove();
     print('  ✅ System state cleared', 'green');
