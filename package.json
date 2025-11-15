@@ -21,7 +21,6 @@
     "export": "next export",
     "reset-queue": "node scripts/reset-queue.js",
     "admin-reset": "node scripts/admin-reset.js",
-    "touchdesigner:token": "node scripts/generate-touchdesigner-token.js",
     "analyze-trends": "node scripts/analyze-trends.js"
   },
   "dependencies": {

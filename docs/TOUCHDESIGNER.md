@@ -19,16 +19,7 @@ Only needed if you want to access authenticated Firestore endpoints for analytic
 3. Click **"Generate new private key"**
 4. Save the JSON file as `firebase-admin-key.json` in your project root
 
-### 3. Generate Authentication Token (Optional)
-
-```bash
-# Generate OAuth token for authenticated Firestore access
-npm run touchdesigner:token
-```
-
-This creates `touchdesigner-config.json` with authenticated access for Firestore session history.
-
-### 4. Configure TouchDesigner
+### 3. Configure TouchDesigner
 
 #### Web Client DAT Setup
 
