@@ -62,16 +62,19 @@ The Snow Globe Controller uses a **dual-database approach** with Firebase:
 ### Theme Options
 
 **Row 1 - Colors:**
+
 - `red` - Classic Christmas red (🔴)
 - `green` - Traditional Christmas green (🟢)
 - `gold` - Elegant golden accents (🟡)
 
 **Row 2 - Patterns:**
+
 - `snowflakes` - Delicate winter snowflakes (❄️)
 - `stars` - Twinkling holiday stars (⭐)
 - `lights` - Festive Christmas lights (💡)
 
 **Row 3 - Effects:**
+
 - `sparkle` - Gentle sparkling animation (✨)
 - `pulse` - Rhythmic pulsing effect (💫)
 - `wave` - Flowing wave motion (🌊)
@@ -100,6 +103,7 @@ The Snow Globe Controller uses a **dual-database approach** with Firebase:
 ```
 
 **Fields:**
+
 - `sessionId`: Unique identifier for the session
 - `startTime`: When the theme became active (Unix timestamp)
 - `endTime`: When the session ended (Unix timestamp)
@@ -166,18 +170,23 @@ service cloud.firestore {
 ## Queue Management
 
 ### Position Calculation
+
 Users in `waitingUsers` are sorted by `joinedAt` timestamp to determine queue position:
+
 - Position 1 = oldest `joinedAt` (next to be activated)
 - Position 2 = second oldest
 - etc.
 
 ### Session Duration
+
 - Default active session: **60 seconds**
 - Countdown timer updates in real-time
 - Automatic progression to next user
 
 ### Admin Operations
+
 Admins can:
+
 - Skip current active user
 - Remove waiting users
 - Clear entire queue

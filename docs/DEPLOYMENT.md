@@ -59,6 +59,7 @@ FIREBASE_ADMIN_SERVICE_ACCOUNT=path/to/firebase-admin-key.json
 ```
 
 **Where to find these values:**
+
 1. Firebase Console → Project Settings → General
 2. Scroll to "Your apps" section
 3. Select your web app or create one
@@ -127,6 +128,7 @@ firebase deploy --only hosting
 ```
 
 **Build outputs:**
+
 - Creates optimized production build
 - Exports static files to `out/` directory
 - Minifies JavaScript and CSS
@@ -157,6 +159,7 @@ GET https://your-project-default-rtdb.firebaseio.com/themeValues/current.json
 ```
 
 **Response:**
+
 ```json
 {
   "row1": "red",
@@ -175,6 +178,7 @@ GET https://your-project-default-rtdb.firebaseio.com/queue.json
 ```
 
 **Response:**
+
 ```json
 {
   "activeUser": {

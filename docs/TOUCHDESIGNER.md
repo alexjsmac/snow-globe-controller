@@ -58,14 +58,15 @@ GET https://YOUR_PROJECT-default-rtdb.firebaseio.com/themeValues/current.json
 ```
 
 **Response:**
+
 ```json
 {
-  "row1": "red",           // Color: red, green, or gold
-  "row2": "snowflakes",    // Pattern: snowflakes, stars, or lights
-  "row3": "sparkle",       // Effect: sparkle, pulse, or wave
-  "sessionId": "abc123",   // Current user's session ID
+  "row1": "red", // Color: red, green, or gold
+  "row2": "snowflakes", // Pattern: snowflakes, stars, or lights
+  "row3": "sparkle", // Effect: sparkle, pulse, or wave
+  "sessionId": "abc123", // Current user's session ID
   "timestamp": 1234567890000,
-  "active": true           // Whether a theme is currently active
+  "active": true // Whether a theme is currently active
 }
 ```
 
@@ -82,6 +83,7 @@ GET https://YOUR_PROJECT-default-rtdb.firebaseio.com/queue.json
 ```
 
 **Response:**
+
 ```json
 {
   "activeUser": {
@@ -92,7 +94,7 @@ GET https://YOUR_PROJECT-default-rtdb.firebaseio.com/queue.json
   },
   "waitingUsers": {
     "user1": {
-      "sessionId": "user1", 
+      "sessionId": "user1",
       "joinedAt": 1234567850000,
       "position": 1
     }
@@ -182,7 +184,7 @@ if web_client.text:
 
         # Display session info
         op('text_session').par.text = f"Session: {session_id[:8]}"
-        
+
         # Enable/disable based on active state
         op('switch_active').par.index = 1 if is_active else 0
 
@@ -206,7 +208,7 @@ if web_client.text:
         if active_user:
             remaining_time = active_user.get('remainingTime', 0)
             session_id = active_user.get('sessionId', '')
-            
+
             # Display countdown timer
             op('text_timer').par.text = f"Time: {remaining_time}s"
 
@@ -228,12 +230,12 @@ if web_client.text:
         # Get next user's theme preview
         waiting_users = queue_data.get('waitingUsers', {})
         themes = queue_data.get('themes', {})
-        
+
         if waiting_users:
             # Get first waiting user
             next_user = min(waiting_users.values(), key=lambda x: x.get('joinedAt', 0))
             next_session = next_user.get('sessionId')
-            
+
             # Get their theme
             if next_session in themes:
                 next_theme = themes[next_session]
@@ -254,7 +256,7 @@ web_client = op('webClient1')
 if web_client.text:
     try:
         data = json.loads(web_client.text)
-        
+
         color = data.get('row1', 'red')
         pattern = data.get('row2', 'snowflakes')
         effect = data.get('row3', 'sparkle')
@@ -285,7 +287,7 @@ if web_client.text:
             intensity = 0.8
         else:
             intensity = 0.6
-        
+
         op('level1').par.opacity = intensity
 
         # Size variations based on pattern + effect
@@ -324,12 +326,12 @@ if web_client.text:
         for session in sessions:
             fields = session.get('fields', {})
             theme = fields.get('theme', {}).get('mapValue', {}).get('fields', {})
-            
+
             if theme:
                 row1 = theme.get('row1', {}).get('stringValue', '')
                 row2 = theme.get('row2', {}).get('stringValue', '')
                 row3 = theme.get('row3', {}).get('stringValue', '')
-                
+
                 combo = f"{row1}-{row2}-{row3}"
                 theme_counts[combo] = theme_counts.get(combo, 0) + 1
 
@@ -337,9 +339,9 @@ if web_client.text:
         if theme_counts:
             popular = max(theme_counts, key=theme_counts.get)
             count = theme_counts[popular]
-            
+
             op('text_popular').par.text = f"Most Popular: {popular} ({count}x)"
-            
+
             # Apply popular theme to preview
             parts = popular.split('-')
             if len(parts) == 3:
@@ -418,17 +420,17 @@ if web_client.text:
         data = json.loads(web_client.text)
         current = f"{data.get('row1')}-{data.get('row2')}-{data.get('row3')}"
         previous = prev_theme.par.name0
-        
+
         # Detect theme change
         if current != previous:
             # Trigger transition animation
             op('transition').par.play = 1
-            
+
             # Store new theme
             prev_theme.par.name0 = current
-            
+
             print(f"Theme changed: {previous} → {current}")
-            
+
     except json.JSONDecodeError:
         pass
 ```

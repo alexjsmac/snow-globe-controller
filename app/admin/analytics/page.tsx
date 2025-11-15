@@ -146,7 +146,7 @@ export default function AdminAnalytics() {
       .map((_, i) => `${scaleX(sessions.length - 1 - i)},${scaleY(0)}`)
       .join(' ');
 
-    return topPath + ' ' + bottomPath;
+    return `${topPath} ${bottomPath}`;
   };
 
   // Format timestamp to readable time

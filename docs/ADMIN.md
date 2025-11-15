@@ -149,24 +149,28 @@ The dashboard can perform these operations:
 ### Admin Actions
 
 **Skip Current User:**
+
 - Immediately ends the active session
 - Saves session data to Firestore
 - Activates next user in queue
 - Use when a user's session needs to be cut short
 
 **Remove Waiting User:**
+
 - Removes a specific user from the waiting queue
 - Deletes their theme selection
 - Updates queue positions for remaining users
 - Use to manage inappropriate submissions or stuck users
 
 **Clear Queue:**
+
 - Removes all waiting users
 - Clears all stored theme selections
 - Resets queue to empty state
 - Keeps active user if present
 
 **Full Reset:**
+
 - Stops active session
 - Clears entire queue
 - Resets theme values to default
@@ -272,6 +276,7 @@ NEXT_PUBLIC_ADMIN_PASSWORD_HASH=admin123
 ## Support
 
 For additional help:
+
 - Check Firebase Console for quota and error logs
 - Review browser console for JavaScript errors
 - Verify all environment variables are correctly set
