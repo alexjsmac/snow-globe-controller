@@ -42,6 +42,31 @@
         }
       }
     },
+    "motionValues": {
+      ".read": true,
+      ".write": true,
+      "current": {
+        ".validate": "newData.hasChild('x') && newData.hasChild('y') && newData.hasChild('z') && newData.hasChild('sessionId') && newData.hasChild('timestamp')",
+        "x": {
+          ".validate": "newData.isNumber()"
+        },
+        "y": {
+          ".validate": "newData.isNumber()"
+        },
+        "z": {
+          ".validate": "newData.isNumber()"
+        },
+        "sessionId": {
+          ".validate": "newData.isString()"
+        },
+        "timestamp": {
+          ".validate": "newData.val() !== null"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "sessions": {
       ".read": "auth != null",
       ".write": true,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSocket } from '@/hooks/useFirebaseQueue';
+import { useAccelerometerStreaming } from '@/hooks/useAccelerometer';
 import { ThemeSelector } from '@/components/ThemeSelector';
 import { Footer } from '@/components/Footer';
 import {
@@ -12,13 +13,33 @@ import {
 } from '@/lib/theme-options';
 
 export default function Home() {
-  const { isConnected, isActive, queuePosition, queueLength, remainingTime, submitTheme } =
-    useSocket();
+  const {
+    isConnected,
+    sessionId,
+    isActive,
+    queuePosition,
+    queueLength,
+    remainingTime,
+    submitTheme,
+  } = useSocket();
 
   const [selectedRow1, setSelectedRow1] = useState(defaultThemeSelection.row1);
   const [selectedRow2, setSelectedRow2] = useState(defaultThemeSelection.row2);
   const [selectedRow3, setSelectedRow3] = useState(defaultThemeSelection.row3);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [motionEnabled, setMotionEnabled] = useState(false);
+
+  const {
+    hasPermission: motionHasPermission,
+    isSupported: motionSupported,
+    lastSample: motionSample,
+    error: motionError,
+    requestPermission: requestMotionPermission,
+  } = useAccelerometerStreaming({
+    enabled: isActive && !!sessionId && motionEnabled,
+    sessionId,
+    throttleMs: 50,
+  });
 
   const handleSubmit = async () => {
     try {
@@ -26,6 +47,18 @@ export default function Home() {
       setHasSubmitted(true);
     } catch (error) {
       console.error('Failed to submit theme:', error);
+    }
+  };
+
+  const handleToggleMotion = async () => {
+    if (motionEnabled) {
+      setMotionEnabled(false);
+      return;
+    }
+
+    const granted = await requestMotionPermission();
+    if (granted) {
+      setMotionEnabled(true);
     }
   };
 
@@ -130,6 +163,33 @@ export default function Home() {
                   style={{ width: `${(remainingTime / 60) * 100}%` }}
                 />
               </div>
+            </div>
+          )}
+
+          {isYourTurn && (
+            <div className="mb-6 flex flex-col items-center gap-2">
+              {motionSupported ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleToggleMotion}
+                    className="px-6 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500"
+                  >
+                    {motionEnabled ? 'Disable Motion Control' : 'Enable Motion Control'}
+                  </button>
+                  {motionError && <p className="text-xs text-red-300 mt-1">{motionError}</p>}
+                  {motionEnabled && motionSample && (
+                    <p className="text-xs text-green-200 mt-1">
+                      Motion: x={motionSample.x.toFixed(2)} y={motionSample.y.toFixed(2)} z=
+                      {motionSample.z.toFixed(2)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-yellow-200">
+                  Motion controls not supported on this device.
+                </p>
+              )}
             </div>
           )}
 
@@ -255,7 +315,15 @@ export default function Home() {
             </div>
             <div className="text-center p-4 bg-green-900/30 border-2 border-red-500 rounded-lg">
               <div className="text-4xl font-bold text-red-300">
-                {isYourTurn ? '🎉' : queuePosition > 0 ? `#${queuePosition}` : '—'}
+                {(() => {
+                  if (isYourTurn) {
+                    return '🎉';
+                  }
+                  if (queuePosition > 0) {
+                    return `#${queuePosition}`;
+                  }
+                  return '—';
+                })()}
               </div>
               <div className="text-sm text-red-200 uppercase tracking-wider mt-2">
                 Your Position
@@ -270,6 +338,28 @@ export default function Home() {
           <p className="text-sm text-green-200">
             Pick your favorite Christmas theme and watch it come to life!
           </p>
+        </div>
+
+        {/* Motion Debug Panel */}
+        <div className="mt-6 text-xs text-left text-green-100/80">
+          <div className="inline-block rounded-md bg-black/40 border border-green-700/60 px-3 py-2">
+            <div className="font-mono text-[0.7rem] text-green-300 mb-1">Motion Debug</div>
+            <div className="font-mono leading-relaxed">
+              <div>sessionId: {sessionId ?? 'null'}</div>
+              <div>isActive: {String(isActive)}</div>
+              <div>isYourTurn: {String(isYourTurn)}</div>
+              <div>supported: {String(motionSupported)}</div>
+              <div>hasPermission: {String(motionHasPermission)}</div>
+              <div>enabled: {String(motionEnabled)}</div>
+              <div>
+                sample:{' '}
+                {motionSample
+                  ? `x=${motionSample.x.toFixed(2)} y=${motionSample.y.toFixed(2)} z=${motionSample.z.toFixed(2)}`
+                  : 'none'}
+              </div>
+              {motionError && <div className="text-red-300">error: {motionError}</div>}
+            </div>
+          </div>
         </div>
       </div>
 
