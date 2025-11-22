@@ -226,7 +226,7 @@ class AdminOperations {
         const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
         promises.push(...deletePromises);
 
-        console.warn(`Deleting ${snapshot.size} Firestore session(s)`);
+        console.log(`Deleting ${snapshot.size} Firestore session(s)`);
 
         // Clear Realtime Database sessions
         const rtdbSessionsRef = ref(realtimeDb, 'sessions');
