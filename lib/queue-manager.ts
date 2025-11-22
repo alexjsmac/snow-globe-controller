@@ -238,9 +238,7 @@ export class FirebaseQueueManager {
               // Once the session is saved, NOW we can remove the stored theme
               await remove(userThemeRef);
             } else {
-              console.warn(
-                `No theme data found for ${activeUser.sessionId} - session not saved`
-              );
+              console.warn(`No theme data found for ${activeUser.sessionId} - session not saved`);
             }
           } catch (error) {
             console.error('Error saving session:', error);
