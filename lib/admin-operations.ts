@@ -2,6 +2,7 @@ import { realtimeDb, firestore } from './firebase-config';
 import { ref, remove, set, get, onValue, off } from 'firebase/database';
 import { collection, getDocs, deleteDoc, query, orderBy, limit } from 'firebase/firestore';
 import { resetThemeSelection } from './theme-service';
+import { resetMotionSample } from './motion-service';
 import type { SessionSummary } from './types';
 
 export interface QueueStatistics {
@@ -225,7 +226,7 @@ class AdminOperations {
         const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
         promises.push(...deletePromises);
 
-        console.log(`Deleting ${snapshot.size} Firestore session(s)`);
+        console.warn(`Deleting ${snapshot.size} Firestore session(s)`);
 
         // Clear Realtime Database sessions
         const rtdbSessionsRef = ref(realtimeDb, 'sessions');
@@ -259,8 +260,10 @@ class AdminOperations {
           queueLength: 0,
         });
 
-        // Also initialize themeValues/current so TouchDesigner always sees a stable JSON object
+        // Also initialize themeValues/current and motionValues/current
+        // so TouchDesigner always sees a stable JSON object when idle.
         await resetThemeSelection();
+        await resetMotionSample();
       }
 
       return {

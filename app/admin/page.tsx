@@ -7,6 +7,42 @@ import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 import styles from './admin.module.css';
 
+type ResetStatusVariant = 'error' | 'warning' | 'success';
+
+const getResetStatusVariant = (status: string): ResetStatusVariant => {
+  if (status.includes('❌')) {
+    return 'error';
+  }
+  if (status.includes('⚠️')) {
+    return 'warning';
+  }
+  return 'success';
+};
+
+const getResetStatusStyles = (variant: ResetStatusVariant) => {
+  if (variant === 'error') {
+    return {
+      background: 'rgba(220, 38, 38, 0.1)',
+      color: '#ef4444',
+      borderColor: 'rgba(220, 38, 38, 0.3)',
+    } as const;
+  }
+
+  if (variant === 'warning') {
+    return {
+      background: 'rgba(245, 158, 11, 0.1)',
+      color: '#f59e0b',
+      borderColor: 'rgba(245, 158, 11, 0.3)',
+    } as const;
+  }
+
+  return {
+    background: 'rgba(16, 185, 129, 0.1)',
+    color: '#10b981',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  } as const;
+};
+
 export default function AdminDashboard() {
   const { isAuthenticated, isLoading, login, logout } = useAdminAuth();
   const [password, setPassword] = useState('');
@@ -239,6 +275,17 @@ export default function AdminDashboard() {
     );
   }
 
+  const averageSliderValue = stats.averageSliderValue ?? 0;
+  let averageSliderColor = '#06b6d4';
+  if (averageSliderValue > 0.1) {
+    averageSliderColor = '#10b981';
+  } else if (averageSliderValue < -0.1) {
+    averageSliderColor = '#ef4444';
+  }
+
+  const resetStatusVariant = resetStatus ? getResetStatusVariant(resetStatus) : null;
+  const resetStatusStyles = resetStatusVariant ? getResetStatusStyles(resetStatusVariant) : null;
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -295,12 +342,7 @@ export default function AdminDashboard() {
           <p
             className={`${styles.statValue} ${styles.statValueSmall}`}
             style={{
-              color:
-                stats?.averageSliderValue && stats.averageSliderValue > 0.1
-                  ? '#10b981'
-                  : stats?.averageSliderValue && stats.averageSliderValue < -0.1
-                    ? '#ef4444'
-                    : '#06b6d4',
+              color: averageSliderColor,
             }}
           >
             {stats?.averageSliderValue !== undefined
@@ -397,30 +439,16 @@ export default function AdminDashboard() {
             </button>
             <p className={styles.controlDesc}>Clear everything including session history</p>
 
-            {resetStatus && (
+            {resetStatus && resetStatusStyles && (
               <div
                 className={styles.controlDesc}
                 style={{
                   whiteSpace: 'pre-line',
                   padding: '1rem',
                   marginTop: '1rem',
-                  background: resetStatus.includes('❌')
-                    ? 'rgba(220, 38, 38, 0.1)'
-                    : resetStatus.includes('⚠️')
-                      ? 'rgba(245, 158, 11, 0.1)'
-                      : 'rgba(16, 185, 129, 0.1)',
-                  color: resetStatus.includes('❌')
-                    ? '#ef4444'
-                    : resetStatus.includes('⚠️')
-                      ? '#f59e0b'
-                      : '#10b981',
-                  border: `1px solid ${
-                    resetStatus.includes('❌')
-                      ? 'rgba(220, 38, 38, 0.3)'
-                      : resetStatus.includes('⚠️')
-                        ? 'rgba(245, 158, 11, 0.3)'
-                        : 'rgba(16, 185, 129, 0.3)'
-                  }`,
+                  background: resetStatusStyles.background,
+                  color: resetStatusStyles.color,
+                  border: `1px solid ${resetStatusStyles.borderColor}`,
                   clipPath:
                     'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))',
                   fontFamily: 'monospace',

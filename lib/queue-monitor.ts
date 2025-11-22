@@ -18,7 +18,6 @@ export class QueueMonitor {
     if (this.isMonitoring) return;
 
     this.isMonitoring = true;
-    console.log('🔍 Queue monitor started');
 
     // Check immediately
     this.checkAndAdvanceQueue();
@@ -38,7 +37,6 @@ export class QueueMonitor {
       this.monitorInterval = null;
     }
     this.isMonitoring = false;
-    console.log('🛑 Queue monitor stopped');
   }
 
   /**
@@ -63,7 +61,7 @@ export class QueueMonitor {
       // Check if active user's time has expired
       const now = Date.now();
       if (activeUser.endTime && now >= activeUser.endTime) {
-        console.log(`⏰ Active user ${activeUser.sessionId} time expired, advancing queue`);
+        console.warn(`⏰ Active user ${activeUser.sessionId} time expired, advancing queue`);
 
         // Remove the expired active user
         await remove(activeUserRef);
@@ -133,7 +131,7 @@ export class QueueMonitor {
         const queueLengthRef = ref(realtimeDb, 'queue/queueLength');
         await set(queueLengthRef, remainingUsers.length);
 
-        console.log(`✅ Activated user ${nextUser.sessionId} from queue monitor`);
+        console.warn(`✅ Activated user ${nextUser.sessionId} from queue monitor`);
       }
     } catch (error) {
       console.error('Error activating next user:', error);

@@ -431,6 +431,13 @@ export default function AdminAnalytics() {
                     // Calculate delay for staggered appearance
                     const delay = (i / sessions.length) * 2; // 2 seconds total animation
 
+                    let circleOpacity = 0;
+                    if (isHovered) {
+                      circleOpacity = 1;
+                    } else if (lineAnimationComplete) {
+                      circleOpacity = 0.8;
+                    }
+
                     return (
                       <g key={i}>
                         <circle
@@ -440,7 +447,7 @@ export default function AdminAnalytics() {
                           fill="#00ffff"
                           stroke="white"
                           strokeWidth={2}
-                          opacity={isHovered ? 1 : lineAnimationComplete ? 0.8 : 0}
+                          opacity={circleOpacity}
                           onMouseEnter={() => setHoveredIndex(i)}
                           onMouseLeave={() => setHoveredIndex(null)}
                           style={{

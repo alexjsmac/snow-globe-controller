@@ -10,6 +10,7 @@ import {
 } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
 import { updateThemeSelection, resetThemeSelection } from './theme-service';
+import { resetMotionSample } from './motion-service';
 import { saveThemeSession } from './session-service';
 import type { QueueUser, ActiveUser, QueueState } from './types';
 
@@ -48,8 +49,6 @@ export class FirebaseQueueManager {
       // Update queue length
       await this.updateQueueLength();
 
-      console.log(`User ${sessionId} joined queue`);
-
       // Check if we need to activate this user (if no one is currently active)
       await this.checkAndActivateNext();
     } catch (error) {
@@ -76,8 +75,6 @@ export class FirebaseQueueManager {
 
       // Update queue length
       await this.updateQueueLength();
-
-      console.log(`User ${sessionId} left queue`);
     } catch (error) {
       console.error('Error leaving queue:', error);
       throw error;
@@ -105,7 +102,6 @@ export class FirebaseQueueManager {
         row3,
         submittedAt: rtdbServerTimestamp(),
       });
-      console.log(`Theme selection stored for ${sessionId}`);
     } catch (error) {
       console.error('Error storing theme selection:', error);
       throw error;
@@ -132,7 +128,6 @@ export class FirebaseQueueManager {
 
           if (!waitingUsers || Object.keys(waitingUsers).length === 0) {
             // No users in queue, just return
-            console.log('No users in queue to activate');
             return;
           }
 
@@ -156,7 +151,6 @@ export class FirebaseQueueManager {
                 themeData.row3,
                 nextUser.sessionId
               );
-              console.log(`Theme published for ${nextUser.sessionId}:`, themeData);
             } else {
               console.warn(`No theme data found for ${nextUser.sessionId}`);
             }
@@ -174,16 +168,11 @@ export class FirebaseQueueManager {
             const userRef = ref(db, `queue/waitingUsers/${nextUser.sessionId}`);
             await remove(userRef);
             await this.updateQueueLength();
-            console.log(
-              `User ${nextUser.sessionId} removed from waiting queue (theme preserved for session saving)`
-            );
 
             // Set timer to deactivate after 60 seconds
             setTimeout(() => {
               this.deactivateCurrentUser();
             }, 60000);
-
-            console.log(`User ${nextUser.sessionId} activated`);
           }
         },
         { onlyOnce: true }
@@ -248,8 +237,6 @@ export class FirebaseQueueManager {
 
               // Once the session is saved, NOW we can remove the stored theme
               await remove(userThemeRef);
-
-              console.log(`Session saved for ${activeUser.sessionId} - waited ${queueWaitTime}s`);
             } else {
               console.warn(`No theme data found for ${activeUser.sessionId} - session not saved`);
             }
@@ -264,15 +251,14 @@ export class FirebaseQueueManager {
           const queueEmpty = !waitingUsers || Object.keys(waitingUsers).length === 0;
 
           if (queueEmpty) {
-            console.log('Queue empty - resetting to idle state');
             // Set activeUser to "none" instead of removing it
             await set(activeUserRef, 'none');
-            // Reset theme values to "none"
+            // Reset theme values to 'none' and motion values to neutral state
             await resetThemeSelection();
+            await resetMotionSample();
           } else {
             // Remove active user before activating next
             await remove(activeUserRef);
-            console.log(`User ${activeUser.sessionId} deactivated, activating next user`);
             // Activate next user if queue not empty
             setTimeout(() => this.activateNextUser(), 100);
           }
@@ -304,7 +290,6 @@ export class FirebaseQueueManager {
 
           // If no active user (null, "none", or undefined), try to activate the next user from queue
           if (!activeUser || activeUser === 'none') {
-            console.log('No active user found, attempting to activate next user');
             await this.activateNextUser();
           }
         },
@@ -337,15 +322,16 @@ export class FirebaseQueueManager {
           await set(queueLengthRef, count);
 
           // If there are no waiting users, and also no active user,
-          // reset the theme selection so TouchDesigner sees the idle state.
+          // reset the theme and motion values so TouchDesigner sees the idle state.
           if (count === 0) {
             const activeUserRef = ref(db, 'queue/activeUser');
             onValue(
               activeUserRef,
               async (activeSnapshot) => {
-                const activeUser = activeSnapshot.val() as ActiveUser | null;
-                if (!activeUser) {
+                const activeUser = activeSnapshot.val() as ActiveUser | 'none' | null;
+                if (!activeUser || activeUser === 'none') {
                   await resetThemeSelection();
+                  await resetMotionSample();
                 }
               },
               { onlyOnce: true }

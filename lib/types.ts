@@ -83,3 +83,12 @@ export interface FirebaseSessionData {
     stdDev: number;
   };
 }
+
+// Motion values structure for Realtime Database (/motionValues/current)
+export interface MotionValuesCurrent {
+  x: number;
+  y: number;
+  z: number;
+  sessionId: string;
+  timestamp: number;
+}
