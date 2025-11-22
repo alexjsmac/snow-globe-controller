@@ -37,8 +37,6 @@ export async function saveThemeSession(sessionData: ThemeSessionData): Promise<v
       theme: sessionData.theme,
       createdAt: sessionData.endTime, // For sorting/querying
     });
-
-    console.warn(`Session ${sessionData.sessionId} saved to Firestore`);
   } catch (error) {
     console.error('Error saving session:', error);
     throw error;

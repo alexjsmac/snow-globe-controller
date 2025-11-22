@@ -341,26 +341,28 @@ export default function Home() {
         </div>
 
         {/* Motion Debug Panel */}
-        <div className="mt-6 text-xs text-left text-green-100/80">
-          <div className="inline-block rounded-md bg-black/40 border border-green-700/60 px-3 py-2">
-            <div className="font-mono text-[0.7rem] text-green-300 mb-1">Motion Debug</div>
-            <div className="font-mono leading-relaxed">
-              <div>sessionId: {sessionId ?? 'null'}</div>
-              <div>isActive: {String(isActive)}</div>
-              <div>isYourTurn: {String(isYourTurn)}</div>
-              <div>supported: {String(motionSupported)}</div>
-              <div>hasPermission: {String(motionHasPermission)}</div>
-              <div>enabled: {String(motionEnabled)}</div>
-              <div>
-                sample:{' '}
-                {motionSample
-                  ? `x=${motionSample.x.toFixed(2)} y=${motionSample.y.toFixed(2)} z=${motionSample.z.toFixed(2)}`
-                  : 'none'}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-6 text-xs text-left text-green-100/80">
+            <div className="inline-block rounded-md bg-black/40 border border-green-700/60 px-3 py-2">
+              <div className="font-mono text-[0.7rem] text-green-300 mb-1">Motion Debug</div>
+              <div className="font-mono leading-relaxed">
+                <div>sessionId: {sessionId ?? 'null'}</div>
+                <div>isActive: {String(isActive)}</div>
+                <div>isYourTurn: {String(isYourTurn)}</div>
+                <div>supported: {String(motionSupported)}</div>
+                <div>hasPermission: {String(motionHasPermission)}</div>
+                <div>enabled: {String(motionEnabled)}</div>
+                <div>
+                  sample:{' '}
+                  {motionSample
+                    ? `x=${motionSample.x.toFixed(2)} y=${motionSample.y.toFixed(2)} z=${motionSample.z.toFixed(2)}`
+                    : 'none'}
+                </div>
+                {motionError && <div className="text-red-300">error: {motionError}</div>}
               </div>
-              {motionError && <div className="text-red-300">error: {motionError}</div>}
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Footer */}

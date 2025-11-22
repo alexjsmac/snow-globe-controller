@@ -18,7 +18,6 @@ export class QueueMonitor {
     if (this.isMonitoring) return;
 
     this.isMonitoring = true;
-    console.warn('🔍 Queue monitor started');
 
     // Check immediately
     this.checkAndAdvanceQueue();
@@ -38,7 +37,6 @@ export class QueueMonitor {
       this.monitorInterval = null;
     }
     this.isMonitoring = false;
-    console.warn('🛑 Queue monitor stopped');
   }
 
   /**
