@@ -44,7 +44,7 @@
     },
     "motionValues": {
       ".read": true,
-      ".write": "newData.child('current').child('sessionId').val() == root.child('queue/activeUser/sessionId').val()",
+      ".write": "root.child('queue/activeUser/sessionId').val() != null && newData.child('current').child('sessionId').val() == root.child('queue/activeUser/sessionId').val()",
       "current": {
         ".validate": "newData.hasChild('x') && newData.hasChild('y') && newData.hasChild('z') && newData.hasChild('sessionId') && newData.hasChild('timestamp')",
         "x": {
