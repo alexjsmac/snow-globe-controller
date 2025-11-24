@@ -1,6 +1,13 @@
 import type { Metadata } from 'next';
+import { Outfit } from 'next/font/google';
 import { QueueMonitorProvider } from '@/components/QueueMonitorProvider';
 import './globals.css';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-outfit',
+});
 
 export const metadata: Metadata = {
   title: 'The Polar Vault | Immersive Photobooth Expedition',
@@ -15,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className={`${outfit.variable} antialiased`}>
         <QueueMonitorProvider>{children}</QueueMonitorProvider>
       </body>
     </html>
