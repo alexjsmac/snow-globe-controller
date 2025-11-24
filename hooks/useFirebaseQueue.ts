@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { firebaseQueueManager, QueueState, ActiveUser } from '../lib/queue-manager';
+import { firebaseQueueManager, QueueState } from '../lib/queue-manager';
 
 interface UseFirebaseQueueReturn {
   isConnected: boolean;
@@ -40,6 +40,37 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     setSessionId(storedSessionId);
     setIsConnected(true); // Firebase is always connected
   }, []);
+
+  const stopCountdown = useCallback(() => {
+    if (countdownInterval.current) {
+      clearInterval(countdownInterval.current);
+      countdownInterval.current = null;
+    }
+    setRemainingTime(0);
+  }, []);
+
+  // Countdown timer for active user
+  const startCountdown = useCallback(
+    (endTime: number) => {
+      stopCountdown(); // Clear any existing countdown
+
+      const updateRemainingTime = () => {
+        const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+        setRemainingTime(remaining);
+
+        if (remaining === 0) {
+          stopCountdown();
+        }
+      };
+
+      // Update immediately
+      updateRemainingTime();
+
+      // Update every 100ms for smooth countdown
+      countdownInterval.current = setInterval(updateRemainingTime, 100);
+    },
+    [stopCountdown]
+  );
 
   // Setup Firebase listeners
   useEffect(() => {
@@ -82,35 +113,7 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
       stopCountdown();
       firebaseQueueManager.cleanup();
     };
-  }, [sessionId]);
-
-  // Countdown timer for active user
-  const startCountdown = useCallback((endTime: number) => {
-    stopCountdown(); // Clear any existing countdown
-
-    const updateRemainingTime = () => {
-      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      setRemainingTime(remaining);
-
-      if (remaining === 0) {
-        stopCountdown();
-      }
-    };
-
-    // Update immediately
-    updateRemainingTime();
-
-    // Update every 100ms for smooth countdown
-    countdownInterval.current = setInterval(updateRemainingTime, 100);
-  }, []);
-
-  const stopCountdown = useCallback(() => {
-    if (countdownInterval.current) {
-      clearInterval(countdownInterval.current);
-      countdownInterval.current = null;
-    }
-    setRemainingTime(0);
-  }, []);
+  }, [sessionId, startCountdown, stopCountdown]);
 
   // Queue operations
   const joinQueue = useCallback(async () => {

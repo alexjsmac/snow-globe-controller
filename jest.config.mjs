@@ -52,7 +52,7 @@ const config = {
 
   // Transform files
   transform: {
-    '^.+\\.(ts|tsx)$': ['@swc/jest', {
+    '^.+\\.(t|j)sx?$': ['@swc/jest', {
       jsc: {
         parser: {
           syntax: 'typescript',
@@ -66,6 +66,9 @@ const config = {
       },
     }],
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(uuid)/)',
+  ],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
