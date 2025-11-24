@@ -4,7 +4,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'The Polar Vault | Immersive Photobooth Expedition',
-  description: 'An immersive winter symphony inside a shipping container. Control the lights, choose your theme, and capture the moment.',
+  description:
+    'An immersive winter symphony inside a shipping container. Control the lights, choose your theme, and capture the moment.',
 };
 
 export default function RootLayout({
