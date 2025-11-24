@@ -100,7 +100,7 @@ export default function Home() {
         <header className="text-center mb-12">
           <h1 className="text-6xl font-black mb-4 relative inline-block">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-green-300 to-red-400 drop-shadow-lg">
-              🎄 Christmas Magic 🎄
+              ❄️ The Polar Vault ❄️
             </span>
           </h1>
           <p className="text-green-100 text-xl tracking-wide mt-4 font-semibold">
@@ -121,7 +121,7 @@ export default function Home() {
                 isConnected ? 'text-green-300' : 'text-red-400'
               }`}
             >
-              {isConnected ? '✨ Connected to Christmas Magic ✨' : '❌ Connection Lost'}
+              {isConnected ? '✨ Connected to The Polar Vault ✨' : '❌ Connection Lost'}
             </span>
           </div>
         </div>

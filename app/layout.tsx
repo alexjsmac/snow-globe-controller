@@ -3,8 +3,9 @@ import { QueueMonitorProvider } from '@/components/QueueMonitorProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Christmas Magic Installation',
-  description: 'Interactive Christmas-themed installation - Pick your theme and join the queue!',
+  title: 'The Polar Vault | Immersive Photobooth Expedition',
+  description:
+    'An immersive winter symphony inside a shipping container. Control the lights, choose your theme, and capture the moment.',
 };
 
 export default function RootLayout({

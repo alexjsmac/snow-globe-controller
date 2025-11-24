@@ -44,8 +44,8 @@
     },
     "motionValues": {
       ".read": true,
-      ".write": "(root.child('queue/activeUser/sessionId').val() != null && newData.child('current').child('sessionId').val() == root.child('queue/activeUser/sessionId').val()) || (root.child('queue/activeUser').val() == 'none' && newData.child('current').child('sessionId').val() == 'none')",
       "current": {
+        ".write": "(root.child('queue/activeUser/sessionId').val() != null && newData.child('sessionId').val() == root.child('queue/activeUser/sessionId').val()) || (root.child('queue/activeUser').val() == 'none' && newData.child('sessionId').val() == 'none')",
         ".validate": "newData.hasChild('x') && newData.hasChild('y') && newData.hasChild('z') && newData.hasChild('sessionId') && newData.hasChild('timestamp')",
         "x": {
           ".validate": "newData.isNumber()"
