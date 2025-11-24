@@ -3,6 +3,11 @@ import { ref, set, remove, onValue } from 'firebase/database';
 
 // Mock Firebase functions
 jest.mock('firebase/database');
+jest.mock('uuid', () => ({
+  v4: jest.fn(
+    () => `12345678-1234-1234-1234-${Math.random().toString(16).slice(2, 14).padEnd(12, '0')}`
+  ),
+}));
 
 describe('FirebaseQueueManager', () => {
   let queueManager: FirebaseQueueManager;
