@@ -27,7 +27,7 @@ export function Footer() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-end">
               {/* Email Link */}
               <a
-                href="mailto:info@bluheroninteractive.com"
+                href="mailto:alex@bluheroninteractive.com"
                 className="group inline-flex items-center gap-2 px-6 py-3 bg-black border border-cyan-500/50 hover:border-cyan-400 hover:bg-cyan-950/20 transition-all hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30"
                 aria-label="Email BluHeron Interactive"
               >
@@ -81,7 +81,7 @@ export function Footer() {
                 style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
               ></div>
               <p className="text-xs text-gray-700 font-mono uppercase tracking-wider">
-                [CONCRETE_CANOPY::INTERFACE::ACTIVE]
+                [THE_POLAR_VAULT::INTERFACE::ACTIVE]
               </p>
               <div
                 className="w-2 h-2 bg-purple-500 animate-pulse"

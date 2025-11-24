@@ -5,12 +5,14 @@ import { useSocket } from '@/hooks/useFirebaseQueue';
 import { useAccelerometerStreaming } from '@/hooks/useAccelerometer';
 import { ThemeSelector } from '@/components/ThemeSelector';
 import { Footer } from '@/components/Footer';
+import SnowParticles from '@/components/SnowParticles';
 import {
   colorOptions,
   patternOptions,
   effectOptions,
   defaultThemeSelection,
 } from '@/lib/theme-options';
+import { Wifi, WifiOff, Clock, Users, Zap } from 'lucide-react';
 
 export default function Home() {
   const {
@@ -28,9 +30,9 @@ export default function Home() {
   const [selectedRow3, setSelectedRow3] = useState(defaultThemeSelection.row3);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [motionEnabled, setMotionEnabled] = useState(false);
+  const [showMotionModal, setShowMotionModal] = useState(false);
 
   const {
-    hasPermission: motionHasPermission,
     isSupported: motionSupported,
     lastSample: motionSample,
     error: motionError,
@@ -42,12 +44,33 @@ export default function Home() {
   });
 
   const handleSubmit = async () => {
+    if (motionSupported && !motionEnabled) {
+      setShowMotionModal(true);
+      return;
+    }
+    await executeSubmission();
+  };
+
+  const executeSubmission = async () => {
     try {
       await submitTheme(selectedRow1, selectedRow2, selectedRow3);
       setHasSubmitted(true);
+      setShowMotionModal(false);
     } catch (error) {
       console.error('Failed to submit theme:', error);
     }
+  };
+
+  const handleEnableAndSubmit = async () => {
+    const granted = await requestMotionPermission();
+    if (granted) {
+      setMotionEnabled(true);
+    }
+    await executeSubmission();
+  };
+
+  const handleSkipAndSubmit = async () => {
+    await executeSubmission();
   };
 
   const handleToggleMotion = async () => {
@@ -63,103 +86,132 @@ export default function Home() {
   };
 
   const handleGoAgain = () => {
-    // Reset local state so the guest can pick a new theme and rejoin the queue
     setHasSubmitted(false);
     setSelectedRow1(defaultThemeSelection.row1);
     setSelectedRow2(defaultThemeSelection.row2);
     setSelectedRow3(defaultThemeSelection.row3);
   };
 
-  // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Determine UI state
   const showSubmitButton = !hasSubmitted && queuePosition === -1;
   const isInQueue = queuePosition > 0;
   const isYourTurn = isActive && queuePosition === 0;
   const showGoAgainButton = hasSubmitted && !isYourTurn && queuePosition === -1;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-950 via-green-950 to-red-950 relative overflow-hidden">
-      {/* Christmas snowflakes background effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 via-green-900/20 to-red-900/30">
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFFFFF' fill-opacity='0.2'%3E%3Cpath d='M30 30 L32 28 L30 26 L28 28 Z M30 30 L28 32 L30 34 L32 32 Z M30 30 L26 30 L24 32 L26 34 L30 30 Z M30 30 L34 30 L36 28 L34 26 L30 30 Z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        ></div>
-      </div>
+    <div className="min-h-screen relative overflow-hidden text-foreground selection:bg-neon-cyan selection:text-black">
+      {/* 3D Background */}
+      <SnowParticles />
+
+      {/* Motion Permission Modal */}
+      {showMotionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="glass-panel max-w-md w-full p-8 rounded-2xl border border-neon-cyan/50 shadow-[0_0_50px_rgba(0,243,255,0.2)] relative">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-neon-cyan/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Zap className="w-8 h-8 text-neon-cyan animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-wider">
+                Enable Motion Control?
+              </h2>
+              <p className="text-white/70 mb-8 leading-relaxed">
+                For the full immersive experience, allow us to use your device&apos;s motion sensors
+                to control the lights during your turn.
+              </p>
+
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={handleEnableAndSubmit}
+                  className="w-full py-4 bg-neon-cyan text-black font-bold text-lg uppercase tracking-widest rounded-lg hover:bg-white transition-colors shadow-[0_0_20px_rgba(0,243,255,0.4)]"
+                >
+                  Enable & Join
+                </button>
+                <button
+                  onClick={handleSkipAndSubmit}
+                  className="w-full py-4 bg-transparent border border-white/20 text-white/60 font-mono uppercase tracking-widest rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  Skip for Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
         {/* Header */}
-        <header className="text-center mb-12">
-          <h1 className="text-6xl font-black mb-4 relative inline-block">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-green-300 to-red-400 drop-shadow-lg">
-              ❄️ The Polar Vault ❄️
+        <header className="text-center mb-12 pt-8">
+          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-tighter">
+            <span className="neon-text-cyan">THE POLAR</span>
+            <span className="block text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+              VAULT
             </span>
           </h1>
-          <p className="text-green-100 text-xl tracking-wide mt-4 font-semibold">
-            Create your theme and join the festive installation!
+          <p className="text-neon-magenta text-xl tracking-widest font-mono uppercase">
+            Immersive Photobooth Expedition
           </p>
         </header>
 
         {/* Connection Status */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center gap-2">
-            <div
-              className={`w-4 h-4 rounded-full ${
-                isConnected ? 'bg-green-400 shadow-green-400/50' : 'bg-red-600 shadow-red-600/50'
-              } shadow-lg animate-pulse`}
-            />
+        <div className="mb-8 flex justify-center">
+          <div
+            className={`
+            glass-panel px-6 py-2 rounded-full flex items-center gap-3
+            ${isConnected ? 'border-neon-lime/30' : 'border-red-500/30'}
+          `}
+          >
+            {isConnected ? (
+              <Wifi className="w-5 h-5 text-neon-lime animate-pulse" />
+            ) : (
+              <WifiOff className="w-5 h-5 text-red-500" />
+            )}
             <span
-              className={`text-sm font-semibold tracking-wider ${
-                isConnected ? 'text-green-300' : 'text-red-400'
-              }`}
+              className={`text-sm font-mono tracking-wider uppercase ${isConnected ? 'text-neon-lime' : 'text-red-400'}`}
             >
-              {isConnected ? '✨ Connected to The Polar Vault ✨' : '❌ Connection Lost'}
+              {isConnected ? 'System Online' : 'Connection Lost'}
             </span>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="bg-green-950/80 backdrop-blur-sm border-4 border-red-500/50 rounded-xl p-8 mb-8 relative overflow-hidden shadow-2xl shadow-red-500/20">
-          {/* Christmas ornament corners */}
-          <div className="absolute top-2 left-2 text-3xl">🎁</div>
-          <div className="absolute top-2 right-2 text-3xl">🎁</div>
-          <div className="absolute bottom-2 left-2 text-3xl">⛄</div>
-          <div className="absolute bottom-2 right-2 text-3xl">⛄</div>
+        <div className="glass-panel rounded-2xl p-8 mb-8 relative overflow-hidden">
+          {/* Decorative Corners */}
+          <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-neon-cyan/30 rounded-tl-2xl"></div>
+          <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-neon-cyan/30 rounded-tr-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-neon-cyan/30 rounded-bl-2xl"></div>
+          <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-neon-cyan/30 rounded-br-2xl"></div>
 
           {/* Status Banner - Your Turn! */}
           {isYourTurn && (
-            <div className="mb-6 p-6 bg-gradient-to-r from-green-800/50 to-red-800/50 border-2 border-green-400 rounded-lg relative animate-pulse">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 via-red-400 to-green-400"></div>
-              <div className="flex justify-between items-center">
+            <div className="mb-8 p-8 bg-neon-lime/10 border border-neon-lime/50 rounded-xl relative overflow-hidden animate-pulse">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-green-300 tracking-wider uppercase">
-                    🎉 IT&apos;S YOUR TURN! 🎉
+                  <h2 className="text-3xl font-black text-neon-lime tracking-tighter italic uppercase mb-2">
+                    It&apos;s Showtime!
                   </h2>
-                  <p className="text-lg text-green-100 mt-2">
-                    Your Christmas theme is now displayed!
+                  <p className="text-lg text-white/80 font-mono">
+                    Your theme is live. Capture the moment!
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold text-green-300 tabular-nums">
+                <div className="text-center bg-black/30 p-4 rounded-lg border border-neon-lime/30">
+                  <div className="text-5xl font-bold text-neon-lime tabular-nums font-mono">
                     {formatTime(remainingTime)}
                   </div>
-                  <div className="text-sm text-green-200 uppercase tracking-wider">
+                  <div className="text-xs text-neon-lime/70 uppercase tracking-widest mt-1">
                     Time Remaining
                   </div>
                 </div>
               </div>
+
               {/* Progress bar */}
-              <div className="mt-4 h-2 bg-green-950 rounded-full overflow-hidden">
+              <div className="mt-6 h-1 bg-black/50 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-green-400 to-red-400 transition-all duration-1000 ease-linear"
+                  className="h-full bg-neon-lime shadow-[0_0_10px_rgba(204,255,0,0.6)] transition-all duration-1000 ease-linear"
                   style={{ width: `${(remainingTime / 60) * 100}%` }}
                 />
               </div>
@@ -167,57 +219,93 @@ export default function Home() {
           )}
 
           {isYourTurn && (
-            <div className="mb-6 flex flex-col items-center gap-2">
+            <div className="mb-8 flex flex-col items-center gap-4">
               {motionSupported ? (
-                <>
+                <div className="w-full max-w-md">
                   <button
                     type="button"
                     onClick={handleToggleMotion}
-                    className="px-6 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500"
+                    className={`
+                      w-full py-4 rounded-xl font-bold text-lg uppercase tracking-wider transition-all
+                      flex items-center justify-center gap-3
+                      ${
+                        motionEnabled
+                          ? 'bg-neon-purple/20 border border-neon-purple text-neon-purple shadow-[0_0_20px_rgba(188,19,254,0.3)]'
+                          : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                      }
+                    `}
                   >
-                    {motionEnabled ? 'Disable Motion Control' : 'Enable Motion Control'}
+                    <Zap className={`w-5 h-5 ${motionEnabled ? 'fill-current' : ''}`} />
+                    {motionEnabled ? 'Motion Control Active' : 'Enable Motion Control'}
                   </button>
-                  {motionError && <p className="text-xs text-red-300 mt-1">{motionError}</p>}
-                  {motionEnabled && motionSample && (
-                    <p className="text-xs text-green-200 mt-1">
-                      Motion: x={motionSample.x.toFixed(2)} y={motionSample.y.toFixed(2)} z=
-                      {motionSample.z.toFixed(2)}
-                    </p>
+
+                  {motionError && (
+                    <p className="text-xs text-red-400 mt-2 text-center font-mono">{motionError}</p>
                   )}
-                </>
+
+                  {motionEnabled && motionSample && (
+                    <div className="mt-4 p-4 bg-black/40 rounded-lg border border-neon-purple/30 font-mono text-xs text-neon-purple/80">
+                      <div className="flex justify-between mb-1">
+                        <span>X-AXIS</span>
+                        <span>{motionSample.x.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span>Y-AXIS</span>
+                        <span>{motionSample.y.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Z-AXIS</span>
+                        <span>{motionSample.z.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <p className="text-xs text-yellow-200">
-                  Motion controls not supported on this device.
+                <p className="text-xs text-yellow-500/80 font-mono border border-yellow-500/30 px-4 py-2 rounded">
+                  ⚠ Motion controls not supported on this device
                 </p>
               )}
             </div>
           )}
 
           {isInQueue && (
-            <div className="mb-6 p-6 bg-gradient-to-r from-red-900/50 to-green-900/50 border-2 border-yellow-400 rounded-lg relative">
-              <h2 className="text-2xl font-bold text-yellow-300 tracking-wider uppercase text-center">
-                🎄 In Queue 🎄
+            <div className="mb-8 p-8 bg-neon-cyan/10 border border-neon-cyan/50 rounded-xl text-center">
+              <h2 className="text-2xl font-bold text-neon-cyan tracking-widest uppercase mb-6 flex items-center justify-center gap-3">
+                <Clock className="w-6 h-6" />
+                In Queue
               </h2>
-              <p className="text-center text-xl text-green-100 mt-4">
-                Position:{' '}
-                <span className="text-yellow-300 font-bold text-3xl">{queuePosition}</span> of{' '}
-                {queueLength}
-              </p>
-              <p className="text-center text-lg text-green-200 mt-2">
-                Estimated wait: {formatTime(queuePosition * 60)}
-              </p>
+              <div className="flex flex-col md:flex-row justify-center gap-8">
+                <div>
+                  <div className="text-5xl font-bold text-white mb-2 font-mono">
+                    {queuePosition}
+                    <span className="text-2xl text-white/50">/{queueLength}</span>
+                  </div>
+                  <div className="text-xs text-neon-cyan/70 uppercase tracking-widest">
+                    Your Position
+                  </div>
+                </div>
+                <div className="hidden md:block w-px bg-neon-cyan/30"></div>
+                <div>
+                  <div className="text-5xl font-bold text-white mb-2 font-mono">
+                    {formatTime(queuePosition * 60)}
+                  </div>
+                  <div className="text-xs text-neon-cyan/70 uppercase tracking-widest">
+                    Est. Wait Time
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Theme Selector */}
           {showSubmitButton && (
             <div className="mb-8">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-green-200 mb-2">
-                  ✨ Pick Your Christmas Theme ✨
+              <div className="text-center mb-10">
+                <h2 className="text-2xl font-bold text-white mb-3 tracking-wide">
+                  Design Your Experience
                 </h2>
-                <p className="text-green-100">
-                  Swipe or click to select options from each category
+                <p className="text-white/60 font-light">
+                  Swipe to customize your lighting sequence
                 </p>
               </div>
               <ThemeSelector
@@ -237,135 +325,93 @@ export default function Home() {
 
           {/* Display selected theme when in queue or active */}
           {(isInQueue || isYourTurn) && (
-            <div className="mb-6 p-4 bg-black/30 border-2 border-green-400 rounded-lg">
-              <h3 className="text-center text-lg font-bold text-green-300 mb-3">
-                Your Christmas Theme
+            <div className="mb-8 p-6 bg-black/40 border border-white/10 rounded-xl">
+              <h3 className="text-center text-sm font-bold text-white/70 mb-6 uppercase tracking-widest">
+                Active Configuration
               </h3>
-              <div className="flex justify-center gap-8 text-center">
-                <div>
-                  <div className="text-5xl mb-2">
-                    {colorOptions.find((o) => o.id === selectedRow1)?.symbol}
+              <div className="flex justify-center gap-12 text-center">
+                {[
+                  { opt: colorOptions.find((o) => o.id === selectedRow1), label: 'Color' },
+                  { opt: patternOptions.find((o) => o.id === selectedRow2), label: 'Pattern' },
+                  { opt: effectOptions.find((o) => o.id === selectedRow3), label: 'Effect' },
+                ].map((item, i) => (
+                  <div key={i} className="flex flex-col items-center gap-2">
+                    <div className="text-4xl filter drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                      {item.opt?.symbol}
+                    </div>
+                    <div className="text-xs text-neon-cyan font-mono uppercase">
+                      {item.opt?.name}
+                    </div>
                   </div>
-                  <div className="text-green-200 text-sm">
-                    {colorOptions.find((o) => o.id === selectedRow1)?.name}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-5xl mb-2">
-                    {patternOptions.find((o) => o.id === selectedRow2)?.symbol}
-                  </div>
-                  <div className="text-green-200 text-sm">
-                    {patternOptions.find((o) => o.id === selectedRow2)?.name}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-5xl mb-2">
-                    {effectOptions.find((o) => o.id === selectedRow3)?.symbol}
-                  </div>
-                  <div className="text-green-200 text-sm">
-                    {effectOptions.find((o) => o.id === selectedRow3)?.name}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-6">
             {showSubmitButton && (
               <button
                 onClick={handleSubmit}
-                className="group relative px-12 py-5 bg-gradient-to-r from-red-600 to-green-600 text-white text-xl font-bold uppercase tracking-wider transition-all hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 rounded-lg overflow-hidden"
+                className="group relative px-12 py-6 bg-neon-cyan/10 border border-neon-cyan text-neon-cyan text-xl font-bold uppercase tracking-widest transition-all hover:bg-neon-cyan hover:text-black hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] rounded-none clip-path-button"
+                style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%)' }}
               >
-                <span className="relative z-10">🎄 Submit & Join Queue 🎄</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <span className="relative z-10 flex items-center gap-3">
+                  Initialize Sequence <Zap className="w-5 h-5" />
+                </span>
               </button>
-            )}
-
-            {isYourTurn && (
-              <div className="text-center">
-                <p className="text-green-200 text-lg animate-pulse">
-                  ✨ Enjoy your minute of Christmas magic! ✨
-                </p>
-              </div>
             )}
 
             {showGoAgainButton && (
               <button
                 onClick={handleGoAgain}
-                className="mt-2 px-10 py-4 border-2 border-green-400 text-green-200 font-bold uppercase tracking-wider rounded-lg bg-black/40 hover:bg-green-900/40 hover:border-green-300 transition-colors"
+                className="px-10 py-4 border border-white/30 text-white/80 font-mono uppercase tracking-widest hover:bg-white/10 hover:border-white hover:text-white transition-all rounded-lg"
               >
-                GO AGAIN
+                Restart System
               </button>
             )}
           </div>
         </div>
 
         {/* Queue Information */}
-        <div className="bg-green-950/80 backdrop-blur-sm border-2 border-yellow-500/50 p-6 rounded-lg shadow-lg">
-          <h3 className="text-2xl font-bold text-yellow-300 mb-4 uppercase tracking-wider text-center">
-            🎅 Queue Status 🎅
+        <div className="glass-panel p-6 rounded-xl">
+          <h3 className="text-lg font-bold text-white/80 mb-6 uppercase tracking-widest text-center flex items-center justify-center gap-2">
+            <Users className="w-5 h-5" /> System Status
           </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-red-900/30 border-2 border-green-500 rounded-lg">
-              <div className="text-4xl font-bold text-green-300 tabular-nums">{queueLength}</div>
-              <div className="text-sm text-green-200 uppercase tracking-wider mt-2">
-                People Waiting
+          <div className="grid grid-cols-2 gap-6">
+            <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
+              <div className="text-3xl font-bold text-white tabular-nums font-mono">
+                {queueLength}
+              </div>
+              <div className="text-xs text-white/50 uppercase tracking-widest mt-2">
+                Users Waiting
               </div>
             </div>
-            <div className="text-center p-4 bg-green-900/30 border-2 border-red-500 rounded-lg">
-              <div className="text-4xl font-bold text-red-300">
-                {(() => {
-                  if (isYourTurn) {
-                    return '🎉';
-                  }
-                  if (queuePosition > 0) {
-                    return `#${queuePosition}`;
-                  }
-                  return '—';
-                })()}
+            <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
+              <div className="text-3xl font-bold text-neon-magenta font-mono">
+                {isYourTurn ? 'ACTIVE' : queuePosition > 0 ? `#${queuePosition}` : 'IDLE'}
               </div>
-              <div className="text-sm text-red-200 uppercase tracking-wider mt-2">
-                Your Position
+              <div className="text-xs text-neon-magenta/70 uppercase tracking-widest mt-2">
+                Your Status
               </div>
             </div>
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="mt-8 text-center text-green-100">
-          <p className="text-lg mb-2">⏱️ Each turn lasts 1 minute</p>
-          <p className="text-sm text-green-200">
-            Pick your favorite Christmas theme and watch it come to life!
-          </p>
-        </div>
-
         {/* Motion Debug Panel */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="mt-6 text-xs text-left text-green-100/80">
-            <div className="inline-block rounded-md bg-black/40 border border-green-700/60 px-3 py-2">
-              <div className="font-mono text-[0.7rem] text-green-300 mb-1">Motion Debug</div>
-              <div className="font-mono leading-relaxed">
-                <div>sessionId: {sessionId ?? 'null'}</div>
-                <div>isActive: {String(isActive)}</div>
-                <div>isYourTurn: {String(isYourTurn)}</div>
-                <div>supported: {String(motionSupported)}</div>
-                <div>hasPermission: {String(motionHasPermission)}</div>
-                <div>enabled: {String(motionEnabled)}</div>
-                <div>
-                  sample:{' '}
-                  {motionSample
-                    ? `x=${motionSample.x.toFixed(2)} y=${motionSample.y.toFixed(2)} z=${motionSample.z.toFixed(2)}`
-                    : 'none'}
-                </div>
-                {motionError && <div className="text-red-300">error: {motionError}</div>}
-              </div>
+          <div className="mt-8 p-4 bg-black/80 border border-gray-800 rounded font-mono text-xs text-gray-500">
+            <div className="mb-2 text-gray-300 font-bold">DEBUG_OVERLAY</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div>sessionId: {sessionId?.slice(0, 8) ?? 'null'}...</div>
+              <div>isActive: {String(isActive)}</div>
+              <div>isYourTurn: {String(isYourTurn)}</div>
+              <div>motionSupported: {String(motionSupported)}</div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
