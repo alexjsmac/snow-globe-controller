@@ -38,13 +38,7 @@ function Particles(props: ParticlesProps) {
 
   return (
     <group ref={ref} rotation={[0, 0, Math.PI / 4]}>
-      <Points
-        positions={pos}
-        colors={cols}
-        stride={3}
-        frustumCulled={false}
-        {...props}
-      >
+      <Points positions={pos} colors={cols} stride={3} frustumCulled={false} {...props}>
         <PointMaterial
           transparent
           vertexColors

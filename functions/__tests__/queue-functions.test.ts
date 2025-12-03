@@ -5,14 +5,13 @@ import * as adminFirestore from 'firebase-admin/firestore';
 // Mocks for Firebase Functions v2 wrappers so we get plain handlers we can call directly
 jest.mock('firebase-functions/v2/scheduler', () => ({
   onSchedule: jest.fn(
-    (_schedule: string, handler: (event: unknown) => Promise<unknown> | unknown) =>
-      handler,
+    (_schedule: string, handler: (event: unknown) => Promise<unknown> | unknown) => handler
   ),
 }));
 
 jest.mock('firebase-functions/v2/database', () => ({
   onValueWritten: jest.fn(
-    (_path: string, handler: (event: unknown) => Promise<unknown> | unknown) => handler,
+    (_path: string, handler: (event: unknown) => Promise<unknown> | unknown) => handler
   ),
 }));
 
@@ -53,13 +52,13 @@ jest.mock('firebase-admin/firestore', () => {
   };
 });
 
-const { mockDbRef } = adminDatabase as (typeof adminDatabase & {
+const { mockDbRef } = adminDatabase as typeof adminDatabase & {
   mockDbRef: jest.Mock;
-});
-const { mockCollection, mockAdd } = adminFirestore as (typeof adminFirestore & {
+};
+const { mockCollection, mockAdd } = adminFirestore as typeof adminFirestore & {
   mockCollection: jest.Mock;
   mockAdd: jest.Mock;
-});
+};
 
 jest.mock('firebase-functions/logger', () => ({
   info: jest.fn(),
@@ -71,9 +70,9 @@ const invokeCheckExpiredTurns = async (event: unknown) =>
   await (checkExpiredTurns as unknown as (e: unknown) => Promise<unknown> | unknown)(event);
 
 const invokeEnsureActiveUserForWaitingQueue = async (event: unknown) =>
-  await (
-    ensureActiveUserForWaitingQueue as unknown as (e: unknown) => Promise<unknown> | unknown
-  )(event);
+  await (ensureActiveUserForWaitingQueue as unknown as (e: unknown) => Promise<unknown> | unknown)(
+    event
+  );
 describe('Cloud Function queue logic', () => {
   beforeEach(() => {
     jest.clearAllMocks();

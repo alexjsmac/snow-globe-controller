@@ -22,7 +22,6 @@ const firestore = getFirestore(app);
  * Runs even when no web clients are connected, so turns always eventually end.
  */
 export const checkExpiredTurns = onSchedule('every 1 minutes', async (_event) => {
-
   try {
     const queueSnap = await db.ref('queue').once('value');
     const queueData = queueSnap.val() || {};
@@ -220,7 +219,6 @@ export const checkExpiredTurns = onSchedule('every 1 minutes', async (_event) =>
 export const ensureActiveUserForWaitingQueue = onValueWritten(
   'queue/waitingUsers/{sessionId}',
   async (_event) => {
-
     try {
       const queueSnap = await db.ref('queue').once('value');
       const queueData = queueSnap.val() || {};
