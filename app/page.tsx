@@ -389,7 +389,11 @@ export default function Home() {
             </div>
             <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
               <div className="text-3xl font-bold text-neon-magenta font-mono">
-                {isYourTurn ? 'ACTIVE' : queuePosition > 0 ? `#${queuePosition}` : 'IDLE'}
+                {(() => {
+                  if (isYourTurn) return 'ACTIVE';
+                  if (queuePosition > 0) return `#${queuePosition}`;
+                  return 'IDLE';
+                })()}
               </div>
               <div className="text-xs text-neon-magenta/70 uppercase tracking-widest mt-2">
                 Your Status

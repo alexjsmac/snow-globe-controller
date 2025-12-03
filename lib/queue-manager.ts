@@ -48,9 +48,6 @@ export class FirebaseQueueManager {
 
       // Update queue length
       await this.updateQueueLength();
-
-      // Check if we need to activate this user (if no one is currently active)
-      await this.checkAndActivateNext();
     } catch (error) {
       console.error('Error joining queue:', error);
       throw error;
@@ -169,10 +166,9 @@ export class FirebaseQueueManager {
             await remove(userRef);
             await this.updateQueueLength();
 
-            // Set timer to deactivate after 60 seconds
-            setTimeout(() => {
-              this.deactivateCurrentUser();
-            }, 60000);
+            // NOTE: We no longer schedule a client-side timeout here.
+            // Turn expiration and progression to the next user is handled
+            // exclusively by the backend Cloud Function.
           }
         },
         { onlyOnce: true }

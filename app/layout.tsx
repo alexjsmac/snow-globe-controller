@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Outfit } from 'next/font/google';
-import { QueueMonitorProvider } from '@/components/QueueMonitorProvider';
 import './globals.css';
 
 const outfit = Outfit({
@@ -22,9 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} antialiased`}>
-        <QueueMonitorProvider>{children}</QueueMonitorProvider>
-      </body>
+      <body className={`${outfit.variable} antialiased`}>{children}</body>
     </html>
   );
 }

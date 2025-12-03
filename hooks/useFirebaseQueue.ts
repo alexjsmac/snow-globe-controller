@@ -72,11 +72,11 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
     [stopCountdown]
   );
 
-  // Setup Firebase listeners
+  // Setup Firebase listeners and initialize queue
   useEffect(() => {
     if (!sessionId) return;
 
-    // Initialize the queue system
+    // Ensure the queue system is initialized (activates first user if needed)
     firebaseQueueManager.initializeQueue();
 
     // Listen to queue state changes
@@ -121,8 +121,10 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
 
     try {
       await firebaseQueueManager.joinQueue(sessionId);
+      // eslint-disable-next-line no-console
       console.log('Joined queue successfully');
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error joining queue:', error);
     }
   }, [sessionId]);
@@ -142,8 +144,10 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
         await firebaseQueueManager.storeThemeSelection(sessionId, row1, row2, row3);
         // Join queue
         await firebaseQueueManager.joinQueue(sessionId);
+        // eslint-disable-next-line no-console
         console.log('Theme submitted and joined queue successfully');
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error submitting theme:', error);
         throw error;
       }
