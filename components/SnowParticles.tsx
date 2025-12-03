@@ -5,9 +5,10 @@ import { Canvas, useFrame, ThreeElements } from '@react-three/fiber';
 import { Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
-function Particles(props: ThreeElements['points']) {
-  const ref = useRef<any>(null);
+type ParticlesProps = Omit<ThreeElements['points'], 'ref'>;
 
+function Particles(props: ParticlesProps) {
+  const ref = useRef<THREE.Group | null>(null);
   const [pos, cols] = useMemo(() => {
     const count = 2000;
     const positions = new Float32Array(count * 3);
@@ -36,15 +37,8 @@ function Particles(props: ThreeElements['points']) {
   });
 
   return (
-    <group rotation={[0, 0, Math.PI / 4]}>
-      <Points
-        ref={ref as any}
-        positions={pos}
-        colors={cols}
-        stride={3}
-        frustumCulled={false}
-        {...props}
-      >
+    <group ref={ref} rotation={[0, 0, Math.PI / 4]}>
+      <Points positions={pos} colors={cols} stride={3} frustumCulled={false} {...props}>
         <PointMaterial
           transparent
           vertexColors

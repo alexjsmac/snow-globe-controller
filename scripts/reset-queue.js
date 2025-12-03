@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console */
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, remove, get, set, serverTimestamp } from 'firebase/database';
 import { getFirestore, collection, getDocs, deleteDoc } from 'firebase/firestore';
