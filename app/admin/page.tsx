@@ -254,7 +254,7 @@ export default function AdminDashboard() {
     return (
       <div className={styles.container}>
         <header className={styles.header}>
-          <h1 className={styles.title}>Concrete Canopy Admin Dashboard</h1>
+          <h1 className={styles.title}>The Polar Vault Admin</h1>
           <button onClick={logout} className={styles.logoutBtn}>
             Logout
           </button>
@@ -275,14 +275,6 @@ export default function AdminDashboard() {
     );
   }
 
-  const averageSliderValue = stats.averageSliderValue ?? 0;
-  let averageSliderColor = '#06b6d4';
-  if (averageSliderValue > 0.1) {
-    averageSliderColor = '#10b981';
-  } else if (averageSliderValue < -0.1) {
-    averageSliderColor = '#ef4444';
-  }
-
   const resetStatusVariant = resetStatus ? getResetStatusVariant(resetStatus) : null;
   const resetStatusStyles = resetStatusVariant ? getResetStatusStyles(resetStatusVariant) : null;
 
@@ -290,7 +282,7 @@ export default function AdminDashboard() {
     <div className={styles.container}>
       {/* Header */}
       <header className={styles.header}>
-        <h1 className={styles.title}>Concrete Canopy Admin Dashboard</h1>
+        <h1 className={styles.title}>The Polar Vault Admin</h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <Link
             href="/admin/analytics"
@@ -333,21 +325,28 @@ export default function AdminDashboard() {
         </div>
 
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Sessions Today</div>
-          <p className={styles.statValue}>{stats?.totalSessionsToday || 0}</p>
+          <div className={styles.statLabel}>Max Queue Length</div>
+          <p className={styles.statValue}>{stats?.maxQueueLength || 0}</p>
         </div>
 
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Avg Slider Value</div>
-          <p
-            className={`${styles.statValue} ${styles.statValueSmall}`}
-            style={{
-              color: averageSliderColor,
-            }}
-          >
-            {stats?.averageSliderValue !== undefined
-              ? (stats.averageSliderValue >= 0 ? '+' : '') + stats.averageSliderValue.toFixed(2)
-              : '0.00'}
+          <div className={styles.statLabel}>Max Wait Time</div>
+          <p className={styles.statValue}>
+            {stats?.maxWaitTime ? formatTime(stats.maxWaitTime) : '0:00'}
+          </p>
+        </div>
+
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Total Sessions</div>
+          <p className={styles.statValue}>{stats?.totalSessions || 0}</p>
+        </div>
+
+        <div className={styles.statCard}>
+          <div className={styles.statLabel}>Current Theme</div>
+          <p className={`${styles.statValue} ${styles.statValueSmall}`}>
+            {stats?.currentTheme
+              ? `${stats.currentTheme.row1} / ${stats.currentTheme.row2} / ${stats.currentTheme.row3}`
+              : 'None'}
           </p>
         </div>
       </div>
@@ -367,6 +366,12 @@ export default function AdminDashboard() {
                   <span className={styles.queueSession}>
                     {stats.activeUser.sessionId.slice(0, 8)}...
                   </span>
+                  {stats.activeUser.theme && (
+                    <span className={styles.queueTheme}>
+                      🎨 {stats.activeUser.theme.row1} / {stats.activeUser.theme.row2} /{' '}
+                      {stats.activeUser.theme.row3}
+                    </span>
+                  )}
                 </div>
                 <div className={styles.queueTimer}>
                   <span>⏱️</span>
@@ -385,6 +390,11 @@ export default function AdminDashboard() {
                     <div className={styles.queueInfo}>
                       <span className={styles.queuePosition}>Position #{user.position}</span>
                       <span className={styles.queueSession}>{user.sessionId.slice(0, 8)}...</span>
+                      {user.theme && (
+                        <span className={styles.queueTheme}>
+                          🎨 {user.theme.row1} / {user.theme.row2} / {user.theme.row3}
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => handleRemoveUser(user.sessionId)}
@@ -396,24 +406,6 @@ export default function AdminDashboard() {
                 ))
               : !stats?.activeUser && <div className={styles.emptyQueue}>Queue is empty</div>}
           </div>
-
-          {/* Current Slider Value */}
-          {stats && typeof stats.currentSliderValue === 'number' && (
-            <div className={styles.sliderIndicator}>
-              <div className={styles.sliderLabel}>Current Slider Value</div>
-              <div className={styles.sliderValue}>
-                {(stats.currentSliderValue >= 0 ? '+' : '') + stats.currentSliderValue.toFixed(3)}
-              </div>
-              <div className={styles.sliderBar}>
-                <div
-                  className={styles.sliderFill}
-                  style={{
-                    width: `${((stats.currentSliderValue + 1) / 2) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* System Controls */}
@@ -428,7 +420,7 @@ export default function AdminDashboard() {
             >
               Quick Reset
             </button>
-            <p className={styles.controlDesc}>Clear the current queue and slider values</p>
+            <p className={styles.controlDesc}>Clear the current queue and theme values</p>
 
             <button
               onClick={() => handleReset('full')}

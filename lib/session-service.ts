@@ -1,5 +1,6 @@
 import { firestore } from './firebase-config';
 import { collection, addDoc } from 'firebase/firestore';
+import { updateMaxWaitTime } from './stats-service';
 
 export interface ThemeSessionData {
   sessionId: string;
@@ -25,6 +26,11 @@ export async function saveThemeSession(sessionData: ThemeSessionData): Promise<v
   }
 
   try {
+    // eslint-disable-next-line no-console
+    console.log(
+      `Saving session ${sessionData.sessionId.slice(0, 8)}... - Wait time: ${sessionData.queueWaitTime}s`
+    );
+
     const sessionsCollection = collection(firestore, 'sessions');
 
     await addDoc(sessionsCollection, {
@@ -37,6 +43,14 @@ export async function saveThemeSession(sessionData: ThemeSessionData): Promise<v
       theme: sessionData.theme,
       createdAt: sessionData.endTime, // For sorting/querying
     });
+
+    // eslint-disable-next-line no-console
+    console.log(`✅ Session saved to Firestore`);
+
+    // Update max wait time if this session has a new record
+    if (sessionData.queueWaitTime > 0) {
+      await updateMaxWaitTime(sessionData.queueWaitTime);
+    }
   } catch (error) {
     console.error('Error saving session:', error);
     throw error;

@@ -7,11 +7,13 @@ import {
   off,
   serverTimestamp as rtdbServerTimestamp,
   get,
+  onDisconnect,
 } from 'firebase/database';
 import { v4 as uuidv4 } from 'uuid';
 import { updateThemeSelection, resetThemeSelection } from './theme-service';
 import { resetMotionSample } from './motion-service';
 import { saveThemeSession } from './session-service';
+import { updateMaxQueueLength } from './stats-service';
 import type { QueueUser, ActiveUser, QueueState } from './types';
 
 // Re-export types for convenience
@@ -41,12 +43,30 @@ export class FirebaseQueueManager {
     }
     try {
       const userRef = ref(realtimeDb, `queue/waitingUsers/${sessionId}`);
+      const presenceRef = ref(realtimeDb, `queue/presence/${sessionId}`);
+
+      // Set user in queue
       await set(userRef, {
         sessionId,
         joinedAt: rtdbServerTimestamp(),
       });
 
-      // Update queue length
+      // Set presence indicator
+      await set(presenceRef, {
+        online: true,
+        lastSeen: rtdbServerTimestamp(),
+      });
+
+      // Automatically remove from queue when disconnected
+      try {
+        await onDisconnect(presenceRef).remove();
+        await onDisconnect(userRef).remove();
+      } catch (err) {
+        // onDisconnect may not be available in test environment
+        console.warn('onDisconnect not available:', err);
+      }
+
+      // Update queue length and track max
       await this.updateQueueLength();
     } catch (error) {
       console.error('Error joining queue:', error);
@@ -130,7 +150,25 @@ export class FirebaseQueueManager {
 
           // Find user with earliest joinedAt timestamp
           const sortedUsers = Object.values(waitingUsers).sort((a, b) => a.joinedAt - b.joinedAt);
-          const nextUser = sortedUsers[0];
+
+          // Find the first user who is still online
+          let nextUser = null;
+          for (const user of sortedUsers) {
+            const presenceRef = ref(db, `queue/presence/${user.sessionId}`);
+            const presenceSnap = await get(presenceRef);
+            const presence = presenceSnap.val();
+
+            if (presence && presence.online) {
+              nextUser = user;
+              break;
+            } else {
+              // User is offline, remove them from queue
+              // eslint-disable-next-line no-console
+              console.log(`Skipping offline user: ${user.sessionId}`);
+              const offlineUserRef = ref(db, `queue/waitingUsers/${user.sessionId}`);
+              await remove(offlineUserRef);
+            }
+          }
 
           if (nextUser) {
             const now = Date.now();
@@ -161,6 +199,14 @@ export class FirebaseQueueManager {
               remainingTime: 60,
             });
 
+            // Update presence to show active status
+            const activePresenceRef = ref(db, `queue/presence/${nextUser.sessionId}`);
+            await set(activePresenceRef, {
+              online: true,
+              active: true,
+              lastSeen: rtdbServerTimestamp(),
+            });
+
             // Remove from waiting queue but DON'T delete theme - we need it for session saving
             const userRef = ref(db, `queue/waitingUsers/${nextUser.sessionId}`);
             await remove(userRef);
@@ -182,7 +228,7 @@ export class FirebaseQueueManager {
   /**
    * Deactivate current user and save their session
    */
-  async deactivateCurrentUser(): Promise<void> {
+  async deactivateCurrentUser(callerSessionId?: string): Promise<void> {
     if (!realtimeDb) {
       console.error('Firebase Realtime Database is not initialized');
       return;
@@ -190,6 +236,19 @@ export class FirebaseQueueManager {
     const db = realtimeDb; // Capture for use in callbacks
     try {
       const activeUserRef = ref(db, 'queue/activeUser');
+
+      // First, atomically mark the user as being deactivated to prevent duplicate calls
+      const deactivatingRef = ref(db, `queue/deactivating/${callerSessionId || 'admin'}`);
+      const deactivatingSnap = await get(deactivatingRef);
+
+      if (deactivatingSnap.exists()) {
+        // Already deactivating, skip
+        // eslint-disable-next-line no-console
+        console.log('Deactivation already in progress, skipping');
+        return;
+      }
+
+      await set(deactivatingRef, true);
 
       // Get current active user before removing
       onValue(
@@ -199,6 +258,16 @@ export class FirebaseQueueManager {
 
           // Type guard: Check if activeUser is a valid ActiveUser object (not null, not "none")
           if (!activeUser || activeUser === 'none' || typeof activeUser !== 'object') {
+            await remove(deactivatingRef);
+            return;
+          }
+
+          // If callerSessionId is provided, verify it matches the active user
+          if (callerSessionId && activeUser.sessionId !== callerSessionId) {
+            console.warn(
+              `deactivateCurrentUser called by ${callerSessionId} but active user is ${activeUser.sessionId}`
+            );
+            await remove(deactivatingRef);
             return;
           }
 
@@ -209,11 +278,23 @@ export class FirebaseQueueManager {
             const themeData = themeSnapshot.val();
 
             if (themeData) {
+              // Use submittedAt as the queue join time (when user submitted their theme)
               const queueJoinTime = themeData.submittedAt || activeUser.startTime;
               const queueWaitTime = Math.max(
                 0,
                 Math.floor((activeUser.startTime - queueJoinTime) / 1000)
               );
+
+              // eslint-disable-next-line no-console
+              console.log(
+                `⏱️  Wait time: ${queueWaitTime}s (joined: ${new Date(queueJoinTime).toLocaleTimeString()}, started: ${new Date(activeUser.startTime).toLocaleTimeString()})`
+              );
+              // eslint-disable-next-line no-console
+              console.log(
+                `   → Started at: ${new Date(activeUser.startTime).toLocaleTimeString()}`
+              );
+              // eslint-disable-next-line no-console
+              console.log(`   → Wait time: ${queueWaitTime}s`);
 
               const sessionData = {
                 sessionId: activeUser.sessionId,
@@ -238,7 +319,12 @@ export class FirebaseQueueManager {
             }
           } catch (error) {
             console.error('Error saving session:', error);
+            // Continue with deactivation even if session save fails
           }
+
+          // Remove presence indicator for deactivated user
+          const presenceRef = ref(db, `queue/presence/${activeUser.sessionId}`);
+          await remove(presenceRef);
 
           // Check if queue is empty or activate next user
           const waitingUsersRef = ref(db, 'queue/waitingUsers');
@@ -258,11 +344,21 @@ export class FirebaseQueueManager {
             // Activate next user if queue not empty
             setTimeout(() => this.activateNextUser(), 100);
           }
+
+          // Clean up deactivating flag
+          await remove(deactivatingRef);
         },
         { onlyOnce: true }
       );
     } catch (error) {
       console.error('Error in deactivateCurrentUser:', error);
+      // Clean up deactivating flag on error
+      try {
+        const deactivatingRef = ref(db, `queue/deactivating/${callerSessionId || 'admin'}`);
+        await remove(deactivatingRef);
+      } catch (cleanupError) {
+        console.error('Error cleaning up deactivating flag:', cleanupError);
+      }
       throw error;
     }
   }
@@ -317,15 +413,26 @@ export class FirebaseQueueManager {
           const queueLengthRef = ref(db, 'queue/queueLength');
           await set(queueLengthRef, count);
 
+          // Check if there's an active user to include in total queue size
+          const activeUserRef = ref(db, 'queue/activeUser');
+          const activeSnapshot = await get(activeUserRef);
+          const activeUser = activeSnapshot.val();
+          const totalQueueSize = (activeUser && activeUser !== 'none' ? 1 : 0) + count;
+
+          // Update max queue length in Firestore if this is a new maximum
+          if (totalQueueSize > 0) {
+            await updateMaxQueueLength(totalQueueSize);
+          }
+
           // If there are no waiting users, and also no active user,
           // reset the theme and motion values so TouchDesigner sees the idle state.
           if (count === 0) {
-            const activeUserRef = ref(db, 'queue/activeUser');
+            const activeUserRefInner = ref(db, 'queue/activeUser');
             onValue(
-              activeUserRef,
-              async (activeSnapshot) => {
-                const activeUser = activeSnapshot.val() as ActiveUser | 'none' | null;
-                if (!activeUser || activeUser === 'none') {
+              activeUserRefInner,
+              async (activeSnapshotInner) => {
+                const activeUserInner = activeSnapshotInner.val() as ActiveUser | 'none' | null;
+                if (!activeUserInner || activeUserInner === 'none') {
                   await resetThemeSelection();
                   await resetMotionSample();
                 }

@@ -1,8 +1,18 @@
 import { realtimeDb, firestore } from './firebase-config';
 import { ref, remove, set, get, onValue, off } from 'firebase/database';
-import { collection, getDocs, deleteDoc, query, orderBy, limit } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  limit,
+  doc,
+  onSnapshot,
+} from 'firebase/firestore';
 import { resetThemeSelection } from './theme-service';
 import { resetMotionSample } from './motion-service';
+import { getGlobalStats, resetGlobalStats } from './stats-service';
 import type { SessionSummary } from './types';
 
 export interface QueueStatistics {
@@ -10,16 +20,31 @@ export interface QueueStatistics {
     sessionId: string;
     remainingTime: number;
     startTime: number;
+    theme?: {
+      row1: string;
+      row2: string;
+      row3: string;
+    };
   } | null;
   waitingUsers: Array<{
     sessionId: string;
     joinedAt: number;
     position: number;
+    theme?: {
+      row1: string;
+      row2: string;
+      row3: string;
+    };
   }>;
   queueLength: number;
-  totalSessionsToday: number;
-  averageSliderValue: number; // Average of all session average values
-  currentSliderValue: number | null;
+  totalSessions: number;
+  maxQueueLength: number;
+  maxWaitTime: number; // in seconds
+  currentTheme: {
+    row1: string;
+    row2: string;
+    row3: string;
+  } | null;
 }
 
 export interface ResetOptions {
@@ -50,94 +75,109 @@ class AdminOperations {
       const queueSnapshot = await get(queueRef);
       const queueData = queueSnapshot.val() || {};
 
-      // Get current slider value
-      const sliderRef = ref(realtimeDb, 'sliderValues/current');
-      const sliderSnapshot = await get(sliderRef);
-      const sliderData = sliderSnapshot.val();
+      // Get current theme value
+      const themeRef = ref(realtimeDb, 'themeValues/current');
+      const themeSnapshot = await get(themeRef);
+      const themeData = themeSnapshot.val();
 
-      // Get today's sessions from Firestore
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayTimestamp = today.getTime();
-
+      // Get all sessions from Firestore
       const sessionsRef = collection(firestore, 'sessions');
       const sessionsSnapshot = await getDocs(sessionsRef);
+      const totalSessionCount = sessionsSnapshot.size;
 
-      let todaySessionCount = 0;
-      let totalAverageValue = 0;
+      // Get global stats from Firestore
+      const globalStats = await getGlobalStats();
 
-      sessionsSnapshot.forEach((doc) => {
-        const data = doc.data();
-
-        // Handle different timestamp formats
-        let startTimeMs: number;
-        if (data.startTime?.seconds) {
-          // Firestore Timestamp object
-          startTimeMs = data.startTime.seconds * 1000;
-        } else if (typeof data.startTime === 'number') {
-          // Already a millisecond timestamp
-          startTimeMs = data.startTime;
-        } else {
-          // Skip if we can't parse the timestamp
-          return;
-        }
-
-        // Check if session is from today
-        if (startTimeMs >= todayTimestamp) {
-          todaySessionCount++;
-          // Add the session's average slider value
-          if (data.statistics?.average !== undefined) {
-            totalAverageValue += data.statistics.average;
-          }
-        }
-      });
-
-      const averageSliderValue = todaySessionCount > 0 ? totalAverageValue / todaySessionCount : 0;
-
-      // Format waiting users
+      // Format waiting users and fetch their themes
       const waitingUsers = queueData.waitingUsers
-        ? Object.values(
-            queueData.waitingUsers as Record<
-              string,
-              {
-                sessionId: string;
-                joinedAt: number;
-                position?: number;
-              }
-            >
+        ? await Promise.all(
+            Object.values(
+              queueData.waitingUsers as Record<
+                string,
+                {
+                  sessionId: string;
+                  joinedAt: number;
+                  position?: number;
+                }
+              >
+            )
+              .sort((a, b) => a.joinedAt - b.joinedAt)
+              .map(async (user, index) => {
+                // Get theme for this user
+                let userTheme = null;
+                if (realtimeDb) {
+                  const userThemeRef = ref(realtimeDb, `queue/themes/${user.sessionId}`);
+                  const userThemeSnapshot = await get(userThemeRef);
+                  userTheme = userThemeSnapshot.val();
+                }
+
+                return {
+                  sessionId: user.sessionId,
+                  joinedAt: user.joinedAt,
+                  position: index + 1,
+                  theme: userTheme
+                    ? {
+                        row1: userTheme.row1,
+                        row2: userTheme.row2,
+                        row3: userTheme.row3,
+                      }
+                    : undefined,
+                };
+              })
           )
-            .map((user) => ({
-              sessionId: user.sessionId,
-              joinedAt: user.joinedAt,
-              position: user.position || 0,
-            }))
-            .sort((a, b) => a.position - b.position)
         : [];
 
       // Calculate remaining time for active user
       let activeUser = null;
-      if (queueData.activeUser) {
+      if (queueData.activeUser && queueData.activeUser !== 'none') {
         const now = Date.now();
         const endTime = queueData.activeUser.endTime || now;
         const remainingTime = Math.max(0, Math.floor((endTime - now) / 1000));
+
+        // Get theme for active user
+        let activeTheme = null;
+        if (realtimeDb) {
+          const activeThemeRef = ref(realtimeDb, `queue/themes/${queueData.activeUser.sessionId}`);
+          const activeThemeSnapshot = await get(activeThemeRef);
+          activeTheme = activeThemeSnapshot.val();
+        }
+
         activeUser = {
           sessionId: queueData.activeUser.sessionId,
           remainingTime,
           startTime: queueData.activeUser.startTime,
+          theme: activeTheme
+            ? {
+                row1: activeTheme.row1,
+                row2: activeTheme.row2,
+                row3: activeTheme.row3,
+              }
+            : undefined,
         };
       }
 
-      // Ensure currentSliderValue is properly set
-      const currentSliderValue =
-        sliderData && typeof sliderData.value === 'number' ? sliderData.value : null;
+      // Get current theme being displayed
+      const currentTheme =
+        themeData && themeData.row1 && themeData.row2 && themeData.row3
+          ? {
+              row1: themeData.row1,
+              row2: themeData.row2,
+              row3: themeData.row3,
+            }
+          : null;
+
+      // Get max stats from Firestore global stats
+      const maxQueueLength = globalStats.maxQueueLength;
+      const maxWaitTime = globalStats.maxWaitTime;
 
       return {
         activeUser,
         waitingUsers,
         queueLength: queueData.queueLength || 0,
-        totalSessionsToday: todaySessionCount,
-        averageSliderValue: averageSliderValue, // Average of session averages
-        currentSliderValue,
+        totalSessions: totalSessionCount,
+        maxQueueLength,
+        maxWaitTime,
+        currentTheme,
       };
     } catch (error) {
       console.error('Error getting queue statistics:', error);
@@ -146,24 +186,25 @@ class AdminOperations {
         activeUser: null,
         waitingUsers: [],
         queueLength: 0,
-        totalSessionsToday: 0,
-        averageSliderValue: 0,
-        currentSliderValue: null,
+        totalSessions: 0,
+        maxQueueLength: 0,
+        maxWaitTime: 0,
+        currentTheme: null,
       };
     }
   }
 
   // Subscribe to real-time queue updates
   subscribeToQueueStats(callback: (stats: QueueStatistics) => void): () => void {
-    if (!realtimeDb) {
-      console.error('Firebase Realtime Database is not initialized');
+    if (!realtimeDb || !firestore) {
+      console.error('Firebase is not initialized');
       return () => {};
     }
     this.statsListener = callback;
 
     // Set up real-time listeners
     const queueRef = ref(realtimeDb, 'queue');
-    const sliderRef = ref(realtimeDb, 'sliderValues/current');
+    const themeRef = ref(realtimeDb, 'themeValues/current');
 
     const updateStats = async () => {
       const stats = await this.getQueueStatistics();
@@ -174,17 +215,23 @@ class AdminOperations {
 
     // Listen to queue changes
     onValue(queueRef, updateStats);
-    onValue(sliderRef, updateStats);
+    onValue(themeRef, updateStats);
+
+    // Listen to Firestore global stats changes
+    const statsDocRef = doc(firestore, 'stats/global');
+    const unsubStats = onSnapshot(statsDocRef, () => {
+      updateStats();
+    });
 
     // Store unsubscribe functions
     const unsubQueue = () => {
       off(queueRef, 'value', updateStats);
     };
-    const unsubSlider = () => {
-      off(sliderRef, 'value', updateStats);
+    const unsubTheme = () => {
+      off(themeRef, 'value', updateStats);
     };
 
-    this.unsubscribes.push(unsubQueue, unsubSlider);
+    this.unsubscribes.push(unsubQueue, unsubTheme, unsubStats);
 
     // Initial update
     updateStats();
@@ -215,15 +262,18 @@ class AdminOperations {
       }
 
       if (options.clearSliderValues !== false) {
+        // Clear both legacy slider values and new theme values
         const sliderRef = ref(realtimeDb, 'sliderValues');
+        const themeValuesRef = ref(realtimeDb, 'themeValues');
         promises.push(remove(sliderRef));
+        promises.push(remove(themeValuesRef));
       }
 
       if (options.clearSessions) {
         // Clear Firestore sessions
         const sessionsRef = collection(firestore, 'sessions');
         const snapshot = await getDocs(sessionsRef);
-        const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
+        const deletePromises = snapshot.docs.map((docSnapshot) => deleteDoc(docSnapshot.ref));
         promises.push(...deletePromises);
 
         console.warn(`Deleting ${snapshot.size} Firestore session(s)`);
@@ -231,6 +281,9 @@ class AdminOperations {
         // Clear Realtime Database sessions
         const rtdbSessionsRef = ref(realtimeDb, 'sessions');
         promises.push(remove(rtdbSessionsRef));
+
+        // Reset global stats when clearing sessions
+        promises.push(resetGlobalStats());
       }
 
       if (options.clearSystemState) {
@@ -290,8 +343,8 @@ class AdminOperations {
     const snapshot = await getDocs(q);
 
     const sessions: SessionSummary[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
+    snapshot.forEach((sessionDoc) => {
+      const data = sessionDoc.data();
 
       // Convert Firestore timestamps to milliseconds
       let startTime: number;
@@ -310,7 +363,7 @@ class AdminOperations {
       }
 
       sessions.push({
-        sessionId: data.sessionId || doc.id,
+        sessionId: data.sessionId || sessionDoc.id,
         startTime,
         endTime,
         duration: data.duration || 0,

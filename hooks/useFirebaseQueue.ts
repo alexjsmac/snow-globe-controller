@@ -25,6 +25,8 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
 
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const queueUnsubscribe = useRef<(() => void) | null>(null);
+  const isActiveRef = useRef(false);
+  const hasDeactivated = useRef(false);
 
   // Initialize session ID
   useEffect(() => {
@@ -59,7 +61,22 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
         setRemainingTime(remaining);
 
         if (remaining === 0) {
-          stopCountdown();
+          // Set flag FIRST to prevent race conditions
+          if (isActiveRef.current && sessionId && !hasDeactivated.current) {
+            hasDeactivated.current = true; // Set immediately to block other calls
+            stopCountdown(); // Stop timer before async operation
+
+            // eslint-disable-next-line no-console
+            console.log('Deactivating user:', sessionId);
+            firebaseQueueManager.deactivateCurrentUser(sessionId).catch((err) => {
+              // eslint-disable-next-line no-console
+              console.error('Error deactivating user:', err);
+              // Reset flag on error so user can retry
+              hasDeactivated.current = false;
+            });
+          } else if (remaining === 0) {
+            stopCountdown();
+          }
         }
       };
 
@@ -69,7 +86,7 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
       // Update every 100ms for smooth countdown
       countdownInterval.current = setInterval(updateRemainingTime, 100);
     },
-    [stopCountdown]
+    [stopCountdown, sessionId]
   );
 
   // Setup Firebase listeners and initialize queue
@@ -90,9 +107,14 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
         queueState.activeUser.sessionId === sessionId
       );
       setIsActive(userIsActive);
+      isActiveRef.current = userIsActive;
 
       if (userIsActive && queueState.activeUser && typeof queueState.activeUser === 'object') {
         setQueuePosition(0);
+        // Only reset hasDeactivated if we're becoming active for the first time
+        if (!isActiveRef.current) {
+          hasDeactivated.current = false;
+        }
         startCountdown(queueState.activeUser.endTime);
       } else {
         // Check position in waiting queue
@@ -103,6 +125,10 @@ export function useFirebaseQueue(): UseFirebaseQueueReturn {
           setQueuePosition(-1); // Not in queue
         }
         stopCountdown();
+        // Only reset flag when truly no longer active
+        if (isActiveRef.current) {
+          hasDeactivated.current = false;
+        }
       }
     });
 
