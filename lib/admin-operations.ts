@@ -262,10 +262,8 @@ class AdminOperations {
       }
 
       if (options.clearSliderValues !== false) {
-        // Clear both legacy slider values and new theme values
-        const sliderRef = ref(realtimeDb, 'sliderValues');
+        // Clear theme values
         const themeValuesRef = ref(realtimeDb, 'themeValues');
-        promises.push(remove(sliderRef));
         promises.push(remove(themeValuesRef));
       }
 
