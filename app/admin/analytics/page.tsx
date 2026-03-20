@@ -1,71 +1,356 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { firestore } from '@/lib/firebase-config';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import Link from 'next/link';
+import { colorOptions, effectOptions, patternOptions } from '@/lib/theme-options';
+
+interface SessionTheme {
+  row1: string;
+  row2: string;
+  row3: string;
+}
 
 interface SessionData {
   sessionId: string;
   startTime: number;
   endTime: number;
-  statistics?: {
-    average: number;
-    min: number;
-    max: number;
-    standardDeviation?: number;
+  createdAt?: number;
+  theme?: SessionTheme;
+}
+
+function toMs(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+  // Firestore Timestamp-like
+  if (
+    value &&
+    typeof value === 'object' &&
+    'seconds' in value &&
+    typeof (value as { seconds: unknown }).seconds === 'number'
+  ) {
+    return (value as { seconds: number }).seconds * 1000;
+  }
+
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    const ms = d.getTime();
+    return Number.isNaN(ms) ? null : ms;
+  }
+
+  return null;
+}
+
+function countBy<T extends string>(items: T[]): Record<T, number> {
+  return items.reduce(
+    (acc, item) => {
+      acc[item] = (acc[item] || 0) + 1;
+      return acc;
+    },
+    {} as Record<T, number>
+  );
+}
+
+type ThemeOptionLike = { id: string; name: string; symbol: string };
+
+type ThemeGroup = {
+  key: 'colors' | 'patterns' | 'effects';
+  title: string;
+  options: ThemeOptionLike[];
+  counts: Record<string, number>;
+  total: number;
+};
+
+function formatPercent(count: number, total: number): string {
+  if (total <= 0) return '0%';
+  return `${Math.round((count / total) * 100)}%`;
+}
+
+function buildRowsForGroup(group: ThemeGroup): Array<{
+  id: string;
+  label: string;
+  count: number;
+  percent: string;
+}> {
+  const knownCount = group.options.reduce((sum, opt) => sum + (group.counts[opt.id] || 0), 0);
+  const otherCount = Math.max(0, group.total - knownCount);
+
+  const rows = group.options.map((opt) => {
+    const count = group.counts[opt.id] || 0;
+    return {
+      id: opt.id,
+      label: `${opt.symbol} ${opt.name}`,
+      count,
+      percent: formatPercent(count, group.total),
+    };
+  });
+
+  if (otherCount > 0) {
+    rows.push({
+      id: 'other',
+      label: '… Other',
+      count: otherCount,
+      percent: formatPercent(otherCount, group.total),
+    });
+  }
+
+  return rows;
+}
+
+function ThemeBreakdownChart({
+  themeSessionCount,
+  groups,
+}: {
+  themeSessionCount: number;
+  groups: ThemeGroup[];
+}) {
+  const width = 1200;
+  const padding = {
+    top: 28,
+    right: 170,
+    bottom: 18,
+    left: 24,
   };
+
+  const groupTitleHeight = 26;
+  const rowHeight = 28;
+  const groupGap = 18;
+
+  const groupRows = groups.map((g) => ({ group: g, rows: buildRowsForGroup(g) }));
+  const height =
+    padding.top +
+    padding.bottom +
+    groupRows.reduce((sum, gr) => {
+      return sum + groupTitleHeight + gr.rows.length * rowHeight + groupGap;
+    }, 0) -
+    groupGap;
+
+  const labelColWidth = 220;
+  const barStartX = padding.left + labelColWidth;
+  const barMaxWidth = width - barStartX - padding.right;
+
+  let y = padding.top;
+
+  return (
+    <section
+      className="border border-gray-800 bg-gray-900/50 backdrop-blur p-6 relative overflow-hidden"
+      aria-label="Theme breakdown chart"
+    >
+      {/* Subtle animated grid background */}
+      <div className="absolute inset-0 opacity-10">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'linear-gradient(cyan 1px, transparent 1px), linear-gradient(90deg, cyan 1px, transparent 1px)',
+            backgroundSize: '50px 50px',
+            animation: 'slide 10s linear infinite',
+          }}
+        />
+      </div>
+
+      <svg
+        className="relative z-10 w-full h-auto"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`Theme breakdown across ${themeSessionCount} session(s)`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <linearGradient id="themeBar" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#00ffff" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#9333ea" stopOpacity="0.55" />
+          </linearGradient>
+          <filter id="softGlow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Header */}
+        <text
+          x={padding.left}
+          y={18}
+          fill="#00ffff"
+          fontSize={14}
+          fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+        >
+          Theme Selections (counts + %)
+        </text>
+        <text
+          x={width - padding.right}
+          y={18}
+          fill="#9ca3af"
+          fontSize={12}
+          textAnchor="end"
+          fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+        >
+          Total sessions: {themeSessionCount}
+        </text>
+
+        {/* Groups */}
+        {groupRows.map(({ group, rows }) => {
+          const groupYStart = y;
+          y += groupTitleHeight;
+
+          return (
+            <g key={group.key}>
+              <text
+                x={padding.left}
+                y={groupYStart + 18}
+                fill="#e5e7eb"
+                fontSize={13}
+                fontWeight={700}
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+              >
+                {group.title}
+              </text>
+              <text
+                x={width - padding.right}
+                y={groupYStart + 18}
+                fill="#9ca3af"
+                fontSize={12}
+                textAnchor="end"
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+              >
+                n = {group.total}
+              </text>
+
+              {rows.map((row) => {
+                const rowY = y;
+                y += rowHeight;
+
+                const barWidth = group.total > 0 ? (row.count / group.total) * barMaxWidth : 0;
+
+                return (
+                  <g key={`${group.key}:${row.id}`}>
+                    <text
+                      x={padding.left}
+                      y={rowY + 18}
+                      fill="#d1d5db"
+                      fontSize={12}
+                      fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+                    >
+                      {row.label}
+                    </text>
+
+                    <rect
+                      x={barStartX}
+                      y={rowY + 6}
+                      width={barMaxWidth}
+                      height={14}
+                      fill="#0b1220"
+                      stroke="#1f2937"
+                      strokeWidth={1}
+                    />
+                    <rect
+                      x={barStartX}
+                      y={rowY + 6}
+                      width={barWidth}
+                      height={14}
+                      fill="url(#themeBar)"
+                      filter="url(#softGlow)"
+                    />
+
+                    <text
+                      x={barStartX + barMaxWidth + 10}
+                      y={rowY + 18}
+                      fill="#e5e7eb"
+                      fontSize={12}
+                      fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+                    >
+                      {row.count} ({row.percent})
+                    </text>
+                  </g>
+                );
+              })}
+
+              {(() => {
+                y += groupGap;
+                return null;
+              })()}
+            </g>
+          );
+        })}
+      </svg>
+
+      <style jsx>{`
+        @keyframes slide {
+          0% {
+            transform: translate(0, 0);
+          }
+          100% {
+            transform: translate(50px, 50px);
+          }
+        }
+      `}</style>
+    </section>
+  );
 }
 
 export default function AdminAnalytics() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'bar' | 'line'>('line'); // Start with line view to show animation
-  const [lineAnimationComplete, setLineAnimationComplete] = useState(false);
-  const pathRef = useRef<SVGPathElement>(null);
 
   useEffect(() => {
     fetchSessions();
   }, []);
 
-  // Animate line drawing when data loads and in line view
-  useEffect(() => {
-    if (!loading && sessions.length > 0 && viewMode === 'line' && pathRef.current) {
-      // Small delay to ensure smooth transition from loading state
-      const startDelay = setTimeout(() => {
-        // Reset animation
-        setLineAnimationComplete(false);
+  const sessionsWithTheme = useMemo(() => {
+    return sessions.filter((s) => s.theme && s.theme.row1 && s.theme.row2 && s.theme.row3);
+  }, [sessions]);
 
-        if (pathRef.current) {
-          // Get the total length of the path
-          const pathLength = pathRef.current.getTotalLength();
+  const themeCounts = useMemo(() => {
+    const colors = countBy(sessionsWithTheme.map((s) => s.theme!.row1));
+    const patterns = countBy(sessionsWithTheme.map((s) => s.theme!.row2));
+    const effects = countBy(sessionsWithTheme.map((s) => s.theme!.row3));
 
-          // Set up the path for animation
-          pathRef.current.style.strokeDasharray = `${pathLength}`;
-          pathRef.current.style.strokeDashoffset = `${pathLength}`;
+    return { colors, patterns, effects };
+  }, [sessionsWithTheme]);
 
-          // Force browser to recalculate styles
-          pathRef.current.getBoundingClientRect();
+  const chartGroups: ThemeGroup[] = useMemo(() => {
+    const total = sessionsWithTheme.length;
 
-          // Animate the line drawing with easing
-          pathRef.current.style.transition = 'stroke-dashoffset 2.5s cubic-bezier(0.4, 0, 0.2, 1)';
-          pathRef.current.style.strokeDashoffset = '0';
+    return [
+      {
+        key: 'colors',
+        title: 'Color Palette',
+        options: colorOptions,
+        counts: themeCounts.colors,
+        total,
+      },
+      {
+        key: 'patterns',
+        title: 'Light Pattern',
+        options: patternOptions,
+        counts: themeCounts.patterns,
+        total,
+      },
+      {
+        key: 'effects',
+        title: 'Special Effect',
+        options: effectOptions,
+        counts: themeCounts.effects,
+        total,
+      },
+    ];
+  }, [sessionsWithTheme.length, themeCounts.colors, themeCounts.effects, themeCounts.patterns]);
 
-          // Mark animation as complete after it finishes
-          setTimeout(() => {
-            setLineAnimationComplete(true);
-            if (pathRef.current) {
-              pathRef.current.style.strokeDasharray = '';
-              pathRef.current.style.strokeDashoffset = '';
-            }
-          }, 2500);
-        }
-      }, 100);
+  const timeRange = useMemo(() => {
+    if (sessionsWithTheme.length === 0) return null;
 
-      return () => clearTimeout(startDelay);
-    }
-  }, [loading, sessions, viewMode]);
+    const minStart = Math.min(...sessionsWithTheme.map((s) => s.startTime || 0));
+    const maxEnd = Math.max(...sessionsWithTheme.map((s) => s.endTime || 0));
+
+    return {
+      minStart,
+      maxEnd,
+    };
+  }, [sessionsWithTheme]);
 
   const fetchSessions = async () => {
     if (!firestore) {
@@ -80,11 +365,36 @@ export default function AdminAnalytics() {
 
       const sessionsData: SessionData[] = [];
       querySnapshot.forEach((doc) => {
-        const data = doc.data() as SessionData;
-        // Filter out inactive sessions (where min and max are both 0)
-        if (data.statistics && !(data.statistics.min === 0 && data.statistics.max === 0)) {
-          sessionsData.push(data);
-        }
+        const raw = doc.data() as Record<string, unknown>;
+
+        const startTime = toMs(raw.startTime) ?? 0;
+        const endTime = toMs(raw.endTime) ?? 0;
+        const createdAt = toMs(raw.createdAt) ?? undefined;
+
+        const themeRaw = raw.theme as Record<string, unknown> | undefined;
+        const theme =
+          themeRaw &&
+          typeof themeRaw.row1 === 'string' &&
+          typeof themeRaw.row2 === 'string' &&
+          typeof themeRaw.row3 === 'string'
+            ? {
+                row1: themeRaw.row1,
+                row2: themeRaw.row2,
+                row3: themeRaw.row3,
+              }
+            : undefined;
+
+        // Prefer stored sessionId; fall back to doc ID.
+        const sessionId =
+          typeof raw.sessionId === 'string' && raw.sessionId.length > 0 ? raw.sessionId : doc.id;
+
+        sessionsData.push({
+          sessionId,
+          startTime,
+          endTime,
+          createdAt,
+          theme,
+        });
       });
 
       setSessions(sessionsData);
@@ -95,61 +405,6 @@ export default function AdminAnalytics() {
     }
   };
 
-  // Calculate graph dimensions and scaling
-  const graphWidth = 1200;
-  const graphHeight = 500;
-  const padding = { top: 40, right: 40, bottom: 80, left: 60 };
-  const plotWidth = graphWidth - padding.left - padding.right;
-  const plotHeight = graphHeight - padding.top - padding.bottom;
-
-  // Scale values from [-1, 1] to graph coordinates
-  const scaleY = (value: number) => {
-    // value is between -1 and 1, map to plotHeight
-    return plotHeight / 2 - (value * plotHeight) / 2;
-  };
-
-  const scaleX = (index: number) => {
-    return (index / Math.max(sessions.length - 1, 1)) * plotWidth;
-  };
-
-  // Calculate statistics
-  const averages = sessions.map((s) => s.statistics?.average || 0);
-  const globalAverage = averages.reduce((a, b) => a + b, 0) / (averages.length || 1);
-  const maxAvg = Math.max(...averages, 0);
-  const minAvg = Math.min(...averages, 0);
-
-  // Create SVG path for line graph
-  const createLinePath = () => {
-    if (sessions.length === 0) return '';
-
-    return sessions
-      .map((session, i) => {
-        const x = scaleX(i);
-        const y = scaleY(session.statistics?.average || 0);
-        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-      })
-      .join(' ');
-  };
-
-  // Create polyline points for area under curve
-  const createAreaPath = () => {
-    if (sessions.length === 0) return '';
-
-    const topPath = sessions
-      .map((session, i) => `${scaleX(i)},${scaleY(session.statistics?.average || 0)}`)
-      .join(' ');
-
-    // Use slice() to create a copy before reversing to avoid mutating original array
-    const bottomPath = sessions
-      .slice()
-      .reverse()
-      .map((_, i) => `${scaleX(sessions.length - 1 - i)},${scaleY(0)}`)
-      .join(' ');
-
-    return `${topPath} ${bottomPath}`;
-  };
-
-  // Format timestamp to readable time
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleString('en-US', {
       month: 'short',
@@ -199,17 +454,17 @@ export default function AdminAnalytics() {
               SESSION ANALYTICS
             </h1>
             <p className="text-gray-400">
-              Active sessions: {sessions.length} | Global Average: {globalAverage.toFixed(4)}
+              Theme sessions: {sessionsWithTheme.length}
+              {timeRange && (
+                <>
+                  {' '}
+                  | {formatTime(timeRange.minStart)} → {formatTime(timeRange.maxEnd)}
+                </>
+              )}
             </p>
           </div>
 
           <div className="flex gap-4">
-            <button
-              onClick={() => setViewMode(viewMode === 'bar' ? 'line' : 'bar')}
-              className="px-4 py-2 border border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-black transition-all"
-            >
-              {viewMode === 'bar' ? 'LINE VIEW' : 'BAR VIEW'}
-            </button>
             <Link
               href="/admin"
               className="px-4 py-2 border border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white transition-all"
@@ -219,354 +474,15 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="border border-gray-800 p-4 bg-gray-900/50 backdrop-blur">
-            <div className="text-gray-400 text-sm">MIN AVERAGE</div>
-            <div className="text-2xl text-red-400">{minAvg.toFixed(4)}</div>
+        {/* Theme Breakdown Chart */}
+        {sessionsWithTheme.length > 0 ? (
+          <ThemeBreakdownChart themeSessionCount={sessionsWithTheme.length} groups={chartGroups} />
+        ) : (
+          <div className="border border-gray-800 bg-gray-900/50 backdrop-blur p-6 text-gray-400">
+            No theme sessions found.
           </div>
-          <div className="border border-gray-800 p-4 bg-gray-900/50 backdrop-blur">
-            <div className="text-gray-400 text-sm">MAX AVERAGE</div>
-            <div className="text-2xl text-green-400">{maxAvg.toFixed(4)}</div>
-          </div>
-          <div className="border border-gray-800 p-4 bg-gray-900/50 backdrop-blur">
-            <div className="text-gray-400 text-sm">GLOBAL AVERAGE</div>
-            <div className="text-2xl text-cyan-400">{globalAverage.toFixed(4)}</div>
-          </div>
-          <div className="border border-gray-800 p-4 bg-gray-900/50 backdrop-blur">
-            <div className="text-gray-400 text-sm">TREND</div>
-            <div className="text-2xl">
-              {sessions.length > 1 ? (
-                <>
-                  {(() => {
-                    const firstAvg = sessions[0].statistics?.average || 0;
-                    const lastAvg = sessions[sessions.length - 1].statistics?.average || 0;
-                    const diff = lastAvg - firstAvg;
-
-                    if (Math.abs(diff) < 0.01) {
-                      return <span className="text-gray-400">→ STABLE</span>;
-                    } else if (diff > 0) {
-                      return <span className="text-green-400">↑ UP</span>;
-                    } else {
-                      return <span className="text-red-400">↓ DOWN</span>;
-                    }
-                  })()}
-                </>
-              ) : (
-                <span className="text-gray-400">-</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Graph */}
-        <div className="border border-gray-800 bg-gray-900/50 backdrop-blur p-6 relative overflow-hidden">
-          {/* Animated background grid */}
-          <div className="absolute inset-0 opacity-10">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `linear-gradient(cyan 1px, transparent 1px), linear-gradient(90deg, cyan 1px, transparent 1px)`,
-                backgroundSize: '50px 50px',
-                animation: 'slide 10s linear infinite',
-              }}
-            ></div>
-          </div>
-
-          <svg
-            width={graphWidth}
-            height={graphHeight}
-            className="relative z-10"
-            viewBox={`0 0 ${graphWidth} ${graphHeight}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ maxWidth: '100%', height: 'auto' }}
-          >
-            <defs>
-              <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#00ffff" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#9333ea" stopOpacity="0.3" />
-              </linearGradient>
-              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#00ffff" />
-                <stop offset="50%" stopColor="#9333ea" />
-                <stop offset="100%" stopColor="#ec4899" />
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <g transform={`translate(${padding.left}, ${padding.top})`}>
-              {/* Y-axis label - positioned outside the main graph area */}
-              <text
-                x={-45}
-                y={plotHeight / 2}
-                fill="#666"
-                fontSize="12"
-                textAnchor="middle"
-                transform={`rotate(-90, -45, ${plotHeight / 2})`}
-              >
-                Slider Value
-              </text>
-              {/* Grid lines */}
-              {[-1, -0.5, 0, 0.5, 1].map((val) => (
-                <g key={val}>
-                  <line
-                    x1={0}
-                    y1={scaleY(val)}
-                    x2={plotWidth}
-                    y2={scaleY(val)}
-                    stroke={val === 0 ? '#666' : '#333'}
-                    strokeWidth={val === 0 ? 2 : 1}
-                    strokeDasharray={val === 0 ? '0' : '5,5'}
-                  />
-                  <text x={-10} y={scaleY(val) + 5} fill="#666" fontSize="12" textAnchor="end">
-                    {val.toFixed(1)}
-                  </text>
-                </g>
-              ))}
-
-              {/* Global average line */}
-              <line
-                x1={0}
-                y1={scaleY(globalAverage)}
-                x2={plotWidth}
-                y2={scaleY(globalAverage)}
-                stroke="#00ffff"
-                strokeWidth={2}
-                strokeDasharray="10,5"
-                opacity={0.5}
-              />
-              <text x={plotWidth + 5} y={scaleY(globalAverage) + 5} fill="#00ffff" fontSize="10">
-                AVG
-              </text>
-
-              {viewMode === 'bar' ? (
-                // Bar chart
-                <>
-                  {sessions.map((session, i) => {
-                    const avg = session.statistics?.average || 0;
-                    const barHeight = Math.abs(avg) * (plotHeight / 2);
-                    const barY = avg > 0 ? scaleY(avg) : scaleY(0);
-                    const barWidth = Math.max(1, plotWidth / sessions.length - 1);
-                    const isHovered = hoveredIndex === i;
-
-                    return (
-                      <g key={i}>
-                        <rect
-                          x={scaleX(i) - barWidth / 2}
-                          y={barY}
-                          width={barWidth}
-                          height={barHeight}
-                          fill="url(#barGradient)"
-                          opacity={isHovered ? 1 : 0.7}
-                          stroke={isHovered ? '#00ffff' : 'none'}
-                          strokeWidth={2}
-                          onMouseEnter={() => setHoveredIndex(i)}
-                          onMouseLeave={() => setHoveredIndex(null)}
-                          style={{ transition: 'all 0.3s ease' }}
-                        />
-                        {isHovered && (
-                          <g>
-                            <rect
-                              x={scaleX(i) - 60}
-                              y={barY - 40}
-                              width={120}
-                              height={30}
-                              fill="black"
-                              stroke="#00ffff"
-                              strokeWidth={1}
-                              opacity={0.9}
-                            />
-                            <text
-                              x={scaleX(i)}
-                              y={barY - 25}
-                              fill="#00ffff"
-                              fontSize="10"
-                              textAnchor="middle"
-                            >
-                              {avg.toFixed(4)}
-                            </text>
-                            <text
-                              x={scaleX(i)}
-                              y={barY - 15}
-                              fill="#666"
-                              fontSize="8"
-                              textAnchor="middle"
-                            >
-                              {formatTime(session.startTime)}
-                            </text>
-                          </g>
-                        )}
-                      </g>
-                    );
-                  })}
-                </>
-              ) : (
-                // Line chart with area
-                <>
-                  <polygon
-                    points={createAreaPath()}
-                    fill="url(#barGradient)"
-                    opacity={lineAnimationComplete ? 0.3 : 0}
-                    style={{
-                      transition: 'opacity 1s ease-out 1.5s',
-                    }}
-                  />
-                  <path
-                    ref={pathRef}
-                    d={createLinePath()}
-                    stroke="url(#lineGradient)"
-                    strokeWidth={3}
-                    fill="none"
-                    filter="url(#glow)"
-                  />
-                  {sessions.map((session, i) => {
-                    const isHovered = hoveredIndex === i;
-                    const avg = session.statistics?.average || 0;
-                    // Calculate delay for staggered appearance
-                    const delay = (i / sessions.length) * 2; // 2 seconds total animation
-
-                    let circleOpacity = 0;
-                    if (isHovered) {
-                      circleOpacity = 1;
-                    } else if (lineAnimationComplete) {
-                      circleOpacity = 0.8;
-                    }
-
-                    return (
-                      <g key={i}>
-                        <circle
-                          cx={scaleX(i)}
-                          cy={scaleY(avg)}
-                          r={isHovered ? 8 : 4}
-                          fill="#00ffff"
-                          stroke="white"
-                          strokeWidth={2}
-                          opacity={circleOpacity}
-                          onMouseEnter={() => setHoveredIndex(i)}
-                          onMouseLeave={() => setHoveredIndex(null)}
-                          style={{
-                            transition: 'all 0.3s ease',
-                            cursor: 'pointer',
-                            animation: lineAnimationComplete
-                              ? 'none'
-                              : `fadeIn 0.3s ease-out ${delay}s forwards`,
-                          }}
-                        />
-                        {isHovered && (
-                          <g>
-                            <rect
-                              x={scaleX(i) - 60}
-                              y={scaleY(avg) - 40}
-                              width={120}
-                              height={30}
-                              fill="black"
-                              stroke="#00ffff"
-                              strokeWidth={1}
-                              opacity={0.9}
-                            />
-                            <text
-                              x={scaleX(i)}
-                              y={scaleY(avg) - 25}
-                              fill="#00ffff"
-                              fontSize="10"
-                              textAnchor="middle"
-                            >
-                              {avg.toFixed(4)}
-                            </text>
-                            <text
-                              x={scaleX(i)}
-                              y={scaleY(avg) - 15}
-                              fill="#666"
-                              fontSize="8"
-                              textAnchor="middle"
-                            >
-                              {formatTime(session.startTime)}
-                            </text>
-                          </g>
-                        )}
-                      </g>
-                    );
-                  })}
-                </>
-              )}
-
-              {/* X-axis labels */}
-              <g>
-                <text x={0} y={plotHeight + 30} fill="#666" fontSize="10" textAnchor="start">
-                  {sessions[0] && formatTime(sessions[0].startTime)}
-                </text>
-                <text x={plotWidth} y={plotHeight + 30} fill="#666" fontSize="10" textAnchor="end">
-                  {sessions[sessions.length - 1] &&
-                    formatTime(sessions[sessions.length - 1].startTime)}
-                </text>
-                <text
-                  x={plotWidth / 2}
-                  y={plotHeight + 50}
-                  fill="#666"
-                  fontSize="12"
-                  textAnchor="middle"
-                >
-                  Session Timeline →
-                </text>
-              </g>
-            </g>
-          </svg>
-        </div>
-
-        {/* Legend */}
-        <div className="mt-6 flex justify-center gap-8 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gradient-to-r from-cyan-400 to-purple-600"></div>
-            <span className="text-gray-400">Session Average</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-cyan-400" style={{ borderTop: '2px dashed' }}></div>
-            <span className="text-gray-400">Global Average</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-gray-600"></div>
-            <span className="text-gray-400">Neutral (0)</span>
-          </div>
-        </div>
+        )}
       </div>
-
-      <style jsx>{`
-        @keyframes slide {
-          0% {
-            transform: translate(0, 0);
-          }
-          100% {
-            transform: translate(50px, 50px);
-          }
-        }
-
-        @keyframes fadeIn {
-          0% {
-            opacity: 0;
-            transform: scale(0);
-          }
-          100% {
-            opacity: 0.8;
-            transform: scale(1);
-          }
-        }
-
-        @keyframes pulse {
-          0%,
-          100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 0.8;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,0 +1,18 @@
+{
+  "window": {
+    "startMs": 1765170000000,
+    "endMs": 1765558800000
+  },
+  "firestore": {
+    "sessions": []
+  },
+  "rtdb": {
+    "sessions": [],
+    "queueThemes": []
+  },
+  "counts": {
+    "firestoreSessions": 0,
+    "rtdbSessions": 0,
+    "rtdbQueueThemes": 0
+  }
+}

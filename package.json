@@ -21,7 +21,8 @@
     "export": "next build",
     "reset-queue": "node scripts/reset-queue.js",
     "admin-reset": "node scripts/admin-reset.js",
-    "analyze-trends": "node scripts/analyze-trends.js"
+    "analyze-trends": "node scripts/analyze-trends.js",
+    "purge-by-date": "node scripts/purge-by-date.js"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
